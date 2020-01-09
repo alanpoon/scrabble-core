@@ -1,5 +1,7 @@
-#[derive(Debug, Clone)]
-struct ScrabbleTile(char); // Should be a-z or ' '
+use std::collections::{HashMap, HashSet};
+
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
+pub struct ScrabbleTile(pub char); // Should be a-z or ' '
 
 #[derive(Debug, Clone)]
 pub struct Position {
@@ -17,7 +19,7 @@ pub enum ScoreModifier {
 }
 
 impl ScoreModifier {
-    pub fn char(&self) -> char {
+    pub fn as_char(&self) -> char {
         match self {
             ScoreModifier::Plain => ' ',
             ScoreModifier::DoubleLetter => '2',
@@ -29,19 +31,55 @@ impl ScoreModifier {
 }
 
 #[derive(Debug, Clone)]
+pub struct ScrabbleBoardSquare {
+    tile: Option<ScrabbleTile>,
+    cross_checks: Option<Vec<char>>,
+    modifier: ScoreModifier,
+}
+
+impl ScrabbleBoardSquare {
+    fn blank() -> ScrabbleBoardSquare {
+        ScrabbleBoardSquare {
+            tile: None,
+            cross_checks: None,
+            modifier: ScoreModifier::Plain,
+        }
+    }
+
+    pub fn is_occupied(&self) -> bool {
+        self.tile.is_some()
+    }
+
+    pub fn is_anchor(&self) -> bool {
+        self.cross_checks.is_some()
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ScrabbleBoard {
-    placed: Vec<Vec<Option<ScrabbleTile>>>,
-    modifiers: Vec<Vec<ScoreModifier>>,
+    pub squares: Vec<Vec<ScrabbleBoardSquare>>,
 }
 
 impl ScrabbleBoard {
+    pub fn transposed(&self) -> ScrabbleBoard {
+        let mut transposed_squares = self.squares.clone();
+        for row in 0..self.squares.len() {
+            for col in 0..self.squares.len() {
+                transposed_squares[col][row] = self.squares[row][col].clone();
+            }
+        }
+        ScrabbleBoard {
+            squares: transposed_squares,
+        }
+    }
+
     pub fn display(&self) -> String {
-        let mut result = String::with_capacity((self.placed.len() + 1) ^ 2);
-        for (tile_row, mod_row) in self.placed.iter().zip(self.modifiers.iter()) {
-            for (tile, modifier) in tile_row.iter().zip(mod_row.iter()) {
-                let next_char = match tile {
+        let mut result = String::with_capacity((self.squares.len() + 1) ^ 2);
+        for row in self.squares.iter() {
+            for square in row.iter() {
+                let next_char = match &square.tile {
                     Some(tile) => tile.0,
-                    None => modifier.char(),
+                    None => square.modifier.as_char(),
                 };
                 result.push(next_char);
             }
@@ -52,17 +90,13 @@ impl ScrabbleBoard {
 
     pub fn default() -> ScrabbleBoard {
         const SIDE_LENGTH: usize = 15;
-        let placed = vec![vec![None; SIDE_LENGTH]; SIDE_LENGTH];
-        let modifiers = placed
-            .iter()
-            .enumerate()
-            .map(|(row_idx, row)| {
-                (0..row.len())
-                    .map(|col_idx| ScrabbleBoard::modifier(row_idx as i32, col_idx as i32))
-                    .collect()
-            })
-            .collect();
-        ScrabbleBoard { placed, modifiers }
+        let mut squares = vec![vec![ScrabbleBoardSquare::blank(); SIDE_LENGTH]; SIDE_LENGTH];
+        for (row, row_squares) in squares.iter_mut().enumerate() {
+            for (col, square) in row_squares.iter_mut().enumerate() {
+                square.modifier = ScrabbleBoard::modifier(row as i32, col as i32);
+            }
+        }
+        ScrabbleBoard { squares }
     }
 
     fn modifier(row_idx: i32, col_idx: i32) -> ScoreModifier {
@@ -90,17 +124,33 @@ impl ScrabbleBoard {
 
 #[derive(Debug, Clone)]
 pub struct ScrabbleRack {
-    tiles: Vec<ScrabbleTile>,
+    pub tiles: HashMap<ScrabbleTile, usize>,
+}
+
+impl ScrabbleRack {
+    pub fn take_tile(&mut self, tile: ScrabbleTile) -> Result<(), ()> {
+        match self.tiles.entry(tile).or_insert(0) {
+            count if *count > 0 => {
+                *count -= 1;
+                Ok(())
+            }
+            _ => Err(()),
+        }
+    }
+
+    pub fn replace_tile(&mut self, tile: ScrabbleTile) {
+        *self.tiles.entry(tile).or_insert(0) += 1;
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct ScrabbleState {
-    board: ScrabbleBoard,
-    rack: ScrabbleRack,
+    pub board: ScrabbleBoard,
+    pub rack: ScrabbleRack,
 }
 
 #[derive(Debug, Clone, Copy)]
-enum Direction {
+pub enum Direction {
     Horizontal,
     Vertical,
 }

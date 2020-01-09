@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct TrieNode {
-    children: HashMap<char, TrieNode>,
+    pub children: HashMap<char, TrieNode>,
     terminal: bool,
 }
 

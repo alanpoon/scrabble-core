@@ -1,10 +1,5 @@
-mod loading;
-mod scrabble;
-mod solving;
-mod trie;
-
 use crate::loading::{load_vocab, load_vocab_trie};
-use crate::scrabble::Direction;
+use crate::scrabble::Direction::{Horizontal, Vertical};
 use crate::scrabble::{
     Direction, Position, ScrabbleBoardSquare, ScrabblePlay, ScrabbleRack, ScrabbleState,
     ScrabbleTile, BOARD_SIZE,
@@ -41,12 +36,12 @@ impl Solver {
         let mut solving_rows: Vec<SolvingRow> = Vec::with_capacity(2 * BOARD_SIZE);
         for index in 0..BOARD_SIZE {
             let horizontal_solving_row = SolvingRow {
-                direction: Direction::Horizontal,
+                direction: Horizontal,
                 index,
                 squares: board.horizontal_row(index),
             };
             let vertical_solving_row = SolvingRow {
-                direction: Direction::Vertical,
+                direction: Vertical,
                 index,
                 squares: board.vertical_row(index),
             };

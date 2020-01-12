@@ -1,34 +1,58 @@
 use super::cross_checks::CrossChecks;
+use crate::scrabble::Direction;
 
-#[derive(Debug, Clone, Copy)]
-pub struct ScrabbleBoardSquare {
-    pub tile: Option<ScrabbleTile>,
-    pub cross_checks: Option<CrossChecks>,
-    pub modifier: ScoreModifier,
+#[derive(Debug, Clone)]
+pub struct CheckedBoardSquare {
+    pub tile: Option<char>,
+    /// The checks to use when working with a horizontal solving row (determined by vertical neighbors):
+    pub horizontal_cross_checks: Option<CrossChecks>,
+    /// The checks to use when working with a vertical solving row (determined by horizontal neighbors):
+    pub vertical_cross_checks: Option<CrossChecks>,
 }
 
-impl ScrabbleBoardSquare {
-    pub fn is_occupied(&self) -> bool {
-        self.tile.is_some()
+impl CheckedBoardSquare {
+    pub fn to_checked_row_square(&self, direction: Direction) -> CheckedRowSquare {
+        let cross_checks = match direction {
+            Direction::Horizontal => self.horizontal_cross_checks.clone(),
+            Direction::Vertical => self.vertical_cross_checks.clone(),
+        };
+        CheckedRowSquare {
+            tile: self.tile,
+            cross_checks,
+        }
     }
+}
 
+impl Default for CheckedBoardSquare {
+    fn default() -> CheckedBoardSquare {
+        CheckedBoardSquare {
+            tile: None,
+            horizontal_cross_checks: None,
+            vertical_cross_checks: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CheckedRowSquare {
+    pub tile: Option<char>,
+    pub cross_checks: Option<CrossChecks>,
+}
+
+impl CheckedRowSquare {
     pub fn is_anchor(&self) -> bool {
         self.cross_checks.is_some()
     }
 }
 
-impl Default for ScrabbleBoardSquare {
-    fn default() -> Self {
-        ScrabbleBoardSquare {
+impl Default for CheckedRowSquare {
+    fn default() -> CheckedRowSquare {
+        CheckedRowSquare {
             tile: None,
             cross_checks: None,
-            modifier: ScoreModifier::Plain,
         }
     }
 }
-
-#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
-pub struct ScrabbleTile(pub char); // Should be a-z or ' '
 
 #[derive(Debug, Clone, Copy)]
 pub enum ScoreModifier {

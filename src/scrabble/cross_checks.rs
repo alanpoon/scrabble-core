@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct CrossChecks(u32);
 
 impl CrossChecks {
@@ -26,7 +26,7 @@ mod test {
     #[test]
     fn test_cross_checks() {
         let mut checks = CrossChecks::default();
-        for c in (b'a'..=b'z').map(char::from) {
+        for c in (b'a'..b'z').map(char::from) {
             assert!(!checks.is_allowed(c));
             checks.allow(c);
             assert!(checks.is_allowed(c));

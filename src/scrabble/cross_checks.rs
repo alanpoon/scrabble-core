@@ -1,5 +1,5 @@
+use crate::data_structures::{Dawg, DAWG_EDGE_TO_ROOT};
 use crate::scrabble::scoring::letter_value;
-use crate::trie::Trie;
 use std::fmt;
 
 #[derive(Clone)]
@@ -29,31 +29,23 @@ impl CrossChecks {
         }
     }
 
-    pub fn create(trie: &Trie, preceding: &str, following: &str) -> CrossChecks {
-        let mut maybe_node = Some(trie.root());
-        for ch in preceding.chars() {
-            match maybe_node {
-                Some(node) => maybe_node = node.children.get(&ch),
-                None => break,
-            }
-        }
+    pub fn create(dawg: &Dawg, preceding: &str, following: &str) -> CrossChecks {
         let mut checks = CrossChecks::default();
-        if let Some(node) = maybe_node {
-            for (ch, subnode) in node.children.iter() {
-                let mut maybe_subsubnode = Some(subnode);
-                for subch in following.chars() {
-                    match maybe_subsubnode {
-                        Some(subsubnode) => maybe_subsubnode = subsubnode.children.get(&subch),
-                        None => break,
+        let maybe_prior_edge = match preceding.is_empty() {
+            true => Some(DAWG_EDGE_TO_ROOT),
+            false => dawg.walk_from_node(dawg.root(), preceding),
+        };
+        if let Some(prior_edge) = maybe_prior_edge {
+            if let Some(checked_node) = prior_edge.target {
+                dawg.apply_to_child_edges(checked_node, |edge| {
+                    if let Some(final_edge) = dawg.walk_from_prior_edge(edge, following) {
+                        if final_edge.word_terminator {
+                            checks.allow(edge.letter);
+                        }
                     }
-                }
-                if let Some(final_node) = maybe_subsubnode {
-                    if final_node.terminal {
-                        checks.allow(*ch);
-                    }
-                }
+                });
+                checks.cross_sum = CrossChecks::cross_sum(preceding, following);
             }
-            checks.cross_sum = CrossChecks::cross_sum(preceding, following);
         }
         checks
     }
@@ -101,6 +93,7 @@ impl fmt::Display for CrossChecks {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::loading::load_dawg;
 
     #[test]
     fn test_cross_checks() {
@@ -123,15 +116,17 @@ mod test {
 
     #[test]
     fn test_create() {
-        let trie = Trie::new(vec!["hello"]);
-        assert_eq!(CrossChecks::create(&trie, "he", "lo").letters(), "l");
-        assert_eq!(CrossChecks::create(&trie, "he", "oo").letters(), "");
-        assert_eq!(CrossChecks::create(&trie, "hl", "lo").letters(), "");
+        let dawg = load_dawg();
+        assert_eq!(CrossChecks::create(&dawg, "he", "lo").letters(), "l");
+        assert_eq!(CrossChecks::create(&dawg, "he", "oo").letters(), "");
+        assert_eq!(CrossChecks::create(&dawg, "hl", "lo").letters(), "");
     }
 
     #[test]
     fn test_create_2() {
-        let trie = Trie::new(vec!["yyazz", "yyezz", "yyizz", "yyozz", "yyuzz"]);
-        assert_eq!(CrossChecks::create(&trie, "yy", "zz").letters(), "aeiou");
+        let dawg = load_dawg();
+        assert_eq!(CrossChecks::create(&dawg, "ru", "ty").letters(), "nst");
+        assert_eq!(CrossChecks::create(&dawg, "ru", "").letters(), "bcdegmnt");
+        assert_eq!(CrossChecks::create(&dawg, "", "ty").letters(), "s");
     }
 }

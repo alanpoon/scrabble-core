@@ -1,8 +1,10 @@
 use std::slice::Iter;
 
+use crate::data_structures::Dawg;
 pub use crate::scrabble::scoring::{letter_value, ScoreModifier};
-use crate::scrabble::scrabble_board::CheckedScrabbleBoard;
-pub use crate::scrabble::scrabble_board::{Position, ScrabbleBoard, BOARD_SIZE};
+pub use crate::scrabble::scrabble_board::{
+    CheckedScrabbleBoard, Position, ScrabbleBoard, BOARD_SIZE,
+};
 pub use crate::scrabble::scrabble_board_square::{CheckedBoardSquare, CheckedRowSquare};
 pub use crate::scrabble::scrabble_rack::ScrabbleRack;
 
@@ -31,10 +33,4 @@ pub struct ScrabblePlay {
     pub direction: Direction,
     pub word: String,
     pub score: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct ScrabbleState {
-    pub checked_board: CheckedScrabbleBoard,
-    pub rack: ScrabbleRack,
 }

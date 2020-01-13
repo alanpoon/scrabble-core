@@ -1,8 +1,8 @@
+use crate::data_structures::Dawg;
 use crate::scrabble::cross_checks::CrossChecks;
 use crate::scrabble::scoring::ScoreModifier;
 use crate::scrabble::scrabble_board_square::{CheckedBoardSquare, CheckedRowSquare};
 use crate::scrabble::Direction;
-use crate::trie::{Trie, TrieNode};
 use std::collections::VecDeque;
 use std::ops::{Index, IndexMut};
 
@@ -113,7 +113,7 @@ impl ScrabbleBoard {
         result
     }
 
-    pub fn to_checked_board(&self, trie: &Trie) -> CheckedScrabbleBoard {
+    pub fn to_checked_board(&self, dawg: &Dawg) -> CheckedScrabbleBoard {
         let mut checked_board = CheckedScrabbleBoard::default();
         for direction in Direction::iterator() {
             for row in 0..BOARD_SIZE {
@@ -130,7 +130,7 @@ impl ScrabbleBoard {
                             let preceding = CrossChecks::unwrap_or_empty(preceding.as_ref());
                             let following = CrossChecks::unwrap_or_empty(following.as_ref());
                             *square.checks_mut(*direction) =
-                                Some(CrossChecks::create(trie, preceding, following));
+                                Some(CrossChecks::create(dawg, preceding, following));
                         }
                     }
                 }

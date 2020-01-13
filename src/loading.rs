@@ -1,24 +1,24 @@
 use std::fs;
 
-use crate::trie::{DawgEdge, Trie};
+use crate::data_structures::{Dawg, DawgEdge};
 use std::mem::size_of;
 
-pub fn load_vocab() -> Vec<String> {
-    let filename = "assets/scrabble_words.txt";
-    fs::read_to_string(filename)
-        .unwrap()
-        .lines()
-        .map(|x| x.to_string())
-        .collect()
-}
+//pub fn load_vocab() -> Vec<String> {
+//    let filename = "assets/scrabble_words.txt";
+//    fs::read_to_string(filename)
+//        .unwrap()
+//        .lines()
+//        .map(|x| x.to_string())
+//        .collect()
+//}
+//
+//pub fn load_vocab_trie(vocab: Vec<String>) -> Trie {
+//    Trie::new(vocab.iter().map(AsRef::as_ref).collect())
+//}
 
-pub fn load_vocab_trie(vocab: Vec<String>) -> Trie {
-    Trie::new(vocab.iter().map(AsRef::as_ref).collect())
-}
-
-pub fn load_dawg_data() -> Vec<DawgEdge> {
+pub fn load_dawg() -> Dawg {
     let bytes = fs::read("assets/dawg.bin").expect("Couldn't load asserts/dawg.bin");
-    let mut result: Vec<DawgEdge> = Vec::new();
+    let mut edges: Vec<DawgEdge> = Vec::new();
     let u64_size = size_of::<u64>();
     for i in 0..bytes.len() / u64_size {
         let mut num: u64 = 0;
@@ -26,15 +26,15 @@ pub fn load_dawg_data() -> Vec<DawgEdge> {
             let byte_index = u64_size * i + j;
             num += (bytes[byte_index] as u64) << (8 * j) as u64;
         }
-        result.push(num.into());
+        edges.push(num.into());
     }
-    result
+    Dawg { edges }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::trie::DawgNodeIndex;
+    use crate::data_structures::DawgNodeIndex;
 
     //    #[test]
     //    fn test_load_vocab() {
@@ -50,7 +50,7 @@ mod test {
     //    }
     #[test]
     fn test_load_dawg_data() {
-        let dawg_data = load_dawg_data();
+        let dawg_data = load_dawg().edges;
         assert_eq!(dawg_data.len(), 190446);
         assert_eq!(
             dawg_data[0],
@@ -58,7 +58,7 @@ mod test {
                 letter: 'a',
                 word_terminator: false,
                 target: Some(DawgNodeIndex(26)),
-                node_terminator: false
+                node_terminator: false,
             }
         );
         assert_eq!(
@@ -67,7 +67,7 @@ mod test {
                 letter: 'l',
                 word_terminator: false,
                 target: Some(DawgNodeIndex(136)),
-                node_terminator: false
+                node_terminator: false,
             }
         );
     }

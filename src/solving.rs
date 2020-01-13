@@ -1,8 +1,8 @@
+use crate::data_structures::Dawg;
 use crate::scrabble::{
-    letter_value, CheckedRowSquare, Direction, Position, ScoreModifier, ScrabbleBoard,
-    ScrabblePlay, ScrabbleRack, ScrabbleState, BOARD_SIZE,
+    letter_value, CheckedRowSquare, CheckedScrabbleBoard, Direction, Position, ScoreModifier,
+    ScrabbleBoard, ScrabblePlay, ScrabbleRack, ScrabbleState, BOARD_SIZE,
 };
-use crate::trie::{Trie, TrieNode};
 
 #[derive(Debug)]
 pub struct SolvingAisle {
@@ -215,13 +215,14 @@ impl<'a> SolvingAnchor<'a> {
     }
 }
 
-pub struct Solver {
-    dawg: Trie,
-    state: ScrabbleState,
+pub struct PlayGenerator {
+    pub dawg: Dawg,
+    pub checked_board: CheckedScrabbleBoard,
+    pub rack: ScrabbleRack,
 }
 
-impl Solver {
-    fn plays(&self) -> Vec<ScrabblePlay> {
+impl PlayGenerator {
+    pub fn plays(&self) -> Vec<ScrabblePlay> {
         let mut plays: Vec<ScrabblePlay> = Vec::new();
         for solving_row in self.solving_aisles() {
             for (anchor_index, tile) in solving_row.squares.iter().enumerate() {
@@ -252,44 +253,5 @@ impl Solver {
             }
         }
         solving_rows
-    }
-}
-
-//
-//struct Dawg {
-//    edges: Vec<DawgEdge>
-//}
-//
-//struct DawgEdge {
-//    letter: char,
-//    next_node_index: usize,
-//    terminal: bool,
-//    last_edge: bool,
-//}
-//
-//impl Dawg {
-//    fn new(words: Vec<String>) -> Dawg {}
-//}
-
-pub fn solve(vocab_trie: Trie) {
-    let mut rack = ScrabbleRack::new();
-    rack.add_tiles("bcgeave");
-    let mut board = ScrabbleBoard::default();
-    board.add_word("hello", Position { row: 7, col: 7 }, Direction::Horizontal);
-    println!("{}", board.display());
-    let checked_board = board.to_checked_board(&vocab_trie);
-
-    let state = ScrabbleState {
-        checked_board,
-        rack,
-    };
-    let solver = Solver {
-        dawg: vocab_trie,
-        state,
-    };
-    let mut plays = solver.plays();
-    plays.sort_by_key(|x| x.score);
-    for (play, _) in plays.iter().rev().zip(0..10) {
-        println!("{:?}", play);
     }
 }

@@ -210,16 +210,13 @@ pub struct CheckedScrabbleBoard {
 
 impl CheckedScrabbleBoard {
     pub fn aisle(&self, direction: Direction, index: usize) -> [CheckedRowSquare; BOARD_SIZE] {
-        let mut aisle: [CheckedRowSquare; BOARD_SIZE] = Default::default();
-        for i in 0..BOARD_SIZE {
-            let (row_idx, col_idx) = match direction {
-                Direction::Horizontal => (index, i),
-                Direction::Vertical => (i, index),
-            };
-            let square = &self.squares[row_idx][col_idx];
-            aisle[i] = square.to_checked_row_square(direction);
+        let mut aisle_contents: [CheckedRowSquare; BOARD_SIZE] = Default::default();
+        for cross in 0..BOARD_SIZE {
+            let position = Position::from_aisle_cross(direction, index, cross);
+            let square = &self[position];
+            aisle_contents[cross] = square.to_checked_row_square(direction);
         }
-        aisle
+        aisle_contents
     }
 }
 

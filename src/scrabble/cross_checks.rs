@@ -2,7 +2,7 @@ use crate::scrabble::scoring::letter_value;
 use crate::trie::Trie;
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct CrossChecks {
     /// allowed is a bitmask marking which letters are valid for the square
     allowed: u32,
@@ -47,8 +47,10 @@ impl CrossChecks {
                         None => break,
                     }
                 }
-                if maybe_subsubnode.is_some() {
-                    checks.allow(*ch);
+                if let Some(final_node) = maybe_subsubnode {
+                    if final_node.terminal {
+                        checks.allow(*ch);
+                    }
                 }
             }
             checks.cross_sum = CrossChecks::cross_sum(preceding, following);
@@ -81,6 +83,12 @@ impl CrossChecks {
             allowed: 0,
             cross_sum: 0,
         }
+    }
+}
+
+impl fmt::Debug for CrossChecks {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "CrossChecks(letters=\"{}\")", self.letters())
     }
 }
 

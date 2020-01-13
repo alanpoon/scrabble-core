@@ -25,5 +25,8 @@ fn main() {
     let duration = start.elapsed();
     println!("Time elapsed in vocab_trie.contains() is: {:?}", duration);
 
+    let start = Instant::now();
     solve(vocab_trie);
+    let duration = start.elapsed();
+    println!("Time elapsed in solve() is: {:?}", duration);
 }

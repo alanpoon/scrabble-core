@@ -4,6 +4,7 @@ use crate::scrabble::{
 };
 use crate::trie::{Trie, TrieNode};
 
+#[derive(Debug)]
 pub struct SolvingAisle {
     direction: Direction,
     index: usize,
@@ -11,9 +12,8 @@ pub struct SolvingAisle {
 }
 
 impl SolvingAisle {
-    pub fn play(&self, end_word_index: usize, word: String) -> ScrabblePlay {
-        let start_word_index = end_word_index + 1 - word.len();
-        let start = Position::from_aisle_cross(self.direction, self.index, start_word_index);
+    pub fn play(&self, start_word_index: usize, word: String) -> ScrabblePlay {
+        let start = self.position(start_word_index);
         let score = self.score(start_word_index, &word);
         ScrabblePlay {
             start,
@@ -23,22 +23,32 @@ impl SolvingAisle {
         }
     }
 
-    fn score(&self, start_word_index: usize, word: &str) -> u32 {
-        let mut position = Position::from_aisle_cross(self.direction, self.index, start_word_index);
+    fn position(&self, cross: usize) -> Position {
+        Position::from_aisle_cross(self.direction, self.index, cross)
+    }
 
+    fn score(&self, start_word_index: usize, word: &str) -> u32 {
+        let mut position = self.position(start_word_index);
         let mut score = 0;
         let mut new_word_score = 0;
-        let mut word_multiplier = 1;
-        for ch in word.chars() {
-            let score_modifier = ScoreModifier::at(position);
-            let ch_value = score_modifier.letter_multiplier() * letter_value(ch);
+        let mut new_word_multiplier = 1;
 
-            if let Some(cross_checks) = &self.squares[start_word_index].cross_checks {
-                score += score_modifier.word_multiplier() * (cross_checks.cross_sum + ch_value);
-            }
+        for (i, ch) in word.chars().enumerate() {
+            let square = &self.squares[start_word_index + i];
+            let score_modifier = match square.tile {
+                Some(_) => ScoreModifier::Plain,
+                None => ScoreModifier::at(position),
+            };
+            let word_multiplier = score_modifier.word_multiplier();
+            let ch_value = score_modifier.letter_multiplier() * letter_value(ch);
             new_word_score += ch_value;
+            new_word_multiplier *= word_multiplier;
+            if let Some(cross_checks) = &square.cross_checks {
+                score += (cross_checks.cross_sum + ch_value) * word_multiplier;
+            }
             position = position.step(self.direction);
         }
+        score += new_word_score * new_word_multiplier;
         score
     }
 }
@@ -50,26 +60,21 @@ pub struct SolvingAnchor<'a> {
 
 impl<'a> SolvingAnchor<'a> {
     pub fn plays(&self, rack: &ScrabbleRack, root: &TrieNode) -> Vec<ScrabblePlay> {
-        let mut partial_word = String::with_capacity(BOARD_SIZE);
         let mut plays: Vec<ScrabblePlay> = Vec::new();
-        self.add_plays_for_left(
-            &mut plays,
-            &mut rack.clone(),
-            &mut partial_word,
-            root,
-            self.limit(),
-        );
+        let mut rack = rack.clone();
+        let mut partial_word = String::with_capacity(BOARD_SIZE);
+        self.add_plays_for_left(&mut plays, &mut rack, &mut partial_word, root, self.limit());
         plays
     }
 
     fn limit(&self) -> usize {
-        for index in (0..self.anchor_index).rev() {
-            let square = &self.solving_row.squares[index];
-            if square.tile.is_some() || square.is_anchor() {
-                return index + 1;
+        for limit in 0..self.anchor_index {
+            let square = &self.solving_row.squares[self.anchor_index - (limit + 1)];
+            if square.tile.is_some() || square.is_anchor {
+                return limit;
             }
         }
-        0
+        self.anchor_index
     }
 
     fn add_plays_for_left(
@@ -80,7 +85,19 @@ impl<'a> SolvingAnchor<'a> {
         node: &TrieNode,
         limit: usize,
     ) {
-        self.extend_right(plays, rack, partial_word, node, self.anchor_index);
+        let starting_index = {
+            let mut starting_index = self.anchor_index;
+            while starting_index > 1 && self.solving_row.squares[starting_index - 1].tile.is_some()
+            {
+                starting_index -= 1;
+            }
+            starting_index
+        };
+        //println!(
+        //    "Initial-extending {:?} in aisle {} with partial_word \"{}\" starting at cross {}",
+        //    self.solving_row.direction, self.solving_row.index, partial_word, starting_index,
+        //);
+        self.extend_right(plays, rack, partial_word, node, starting_index, true);
         if limit > 0 {
             for (c, subnode) in node.children.iter() {
                 if rack.take_tile(*c).is_ok() {
@@ -100,40 +117,64 @@ impl<'a> SolvingAnchor<'a> {
         partial_word: &mut String,
         node: &TrieNode,
         index: usize,
+        initial: bool,
     ) {
         if index >= BOARD_SIZE {
             return;
         }
         let square = &self.solving_row.squares[index];
-        match self.current_play(partial_word, node, index, square) {
-            Some(play) => plays.push(play),
-            _ => {}
+        if !initial {
+            match self.current_play(partial_word, node, index, square) {
+                Some(play) => plays.push(play),
+                _ => {}
+            }
         }
-        if let Some(c) = square.tile {
-            match node.children.get(&c) {
-                Some(subnode) => {
-                    partial_word.push(c);
-                    self.extend_right(plays, rack, partial_word, subnode, index + 1);
-                    partial_word.pop();
-                }
-                None => {}
+
+        if let Some(ch) = square.tile {
+            let next_node = node.children.get(&ch);
+            if let Some(subnode) = next_node {
+                partial_word.push(ch);
+                //println!(
+                //    "Pushed {} at {:?} (already on board) to get \"{}\". Attempting to extend to {:?}",
+                //    ch,
+                //    self.solving_row.position(index),
+                //    partial_word,
+                //    self.solving_row.position(index + 1),
+                //);
+                self.extend_right(plays, rack, partial_word, subnode, index + 1, false);
+                let popped = partial_word.pop().unwrap();
+                //println!(
+                //    "Dropped {} from partial_word to go back to \"{}\" (ignoring square on board)",
+                //    popped, partial_word
+                //);
             }
         } else {
-            for (c, subnode) in node.children.iter() {
-                if !rack.take_tile(*c).is_ok() {
+            for (ch, subnode) in node.children.iter() {
+                if !rack.take_tile(*ch).is_ok() {
                     continue;
                 }
                 let allowed = match &square.cross_checks {
-                    Some(cross_checks) => cross_checks.is_allowed(*c),
+                    Some(cross_checks) => cross_checks.is_allowed(*ch),
                     None => true,
                 };
                 if !allowed {
                     continue;
                 }
-                partial_word.push(*c);
-                self.extend_right(plays, rack, partial_word, subnode, index + 1);
+                partial_word.push(*ch);
+                //println!(
+                //    "Pushed {} at {:?} (from rack) to get \"{}\". Attempting to extend to {:?}",
+                //    ch,
+                //    self.solving_row.position(index),
+                //    partial_word,
+                //    self.solving_row.position(index + 1),
+                //);
+                self.extend_right(plays, rack, partial_word, subnode, index + 1, false);
                 partial_word.pop();
-                rack.add_tile(*c);
+                rack.add_tile(*ch);
+                //println!(
+                //    "Dropped {} from partial_word to go back to \"{}\" (restored to rack)",
+                //    ch, partial_word
+                //);
             }
         }
     }
@@ -151,14 +192,22 @@ impl<'a> SolvingAnchor<'a> {
             }
             if let Some(child) = node.children.get(&c) {
                 if child.terminal {
-                    let play = self.solving_row.play(index, partial_word.to_string());
+                    let start = index - partial_word.len() + 1;
+                    //println!(
+                    //    "Found a play! {} starting at {:?} (1)",
+                    //    partial_word,
+                    //    self.solving_row.position(start)
+                    //);
+                    let play = self.solving_row.play(start, partial_word.to_string());
                     return Some(play);
                 }
             }
             None
         } else {
             if node.terminal {
-                Some(self.solving_row.play(index - 1, partial_word.to_string()))
+                let start = index - partial_word.len();
+                //println!("Found a play! {} starting at {} (2)", partial_word, start);
+                Some(self.solving_row.play(start, partial_word.to_string()))
             } else {
                 None
             }
@@ -176,7 +225,7 @@ impl Solver {
         let mut plays: Vec<ScrabblePlay> = Vec::new();
         for solving_row in self.solving_aisles() {
             for (anchor_index, tile) in solving_row.squares.iter().enumerate() {
-                if !tile.is_anchor() {
+                if !tile.is_anchor {
                     continue;
                 }
                 let solving_anchor = SolvingAnchor {
@@ -230,16 +279,8 @@ pub fn solve(vocab_trie: Trie) {
     println!("{}", board.display());
     let checked_board = board.to_checked_board(&vocab_trie);
 
-    for (row_idx, row) in checked_board.squares.iter().enumerate() {
-        for (col_idx, square) in row.iter().enumerate() {
-            if square.horizontal_cross_checks.is_some() || square.vertical_cross_checks.is_some() {
-                println!("{}, {}, {:?}", row_idx, col_idx, square);
-            }
-        }
-    }
-
     let state = ScrabbleState {
-        checked_board: checked_board,
+        checked_board,
         rack,
     };
     let solver = Solver {
@@ -247,8 +288,8 @@ pub fn solve(vocab_trie: Trie) {
         state,
     };
     let mut plays = solver.plays();
-    plays.sort();
-    for play in plays.iter() {
+    plays.sort_by_key(|x| x.score);
+    for (play, _) in plays.iter().rev().zip(0..10) {
         println!("{:?}", play);
     }
 }

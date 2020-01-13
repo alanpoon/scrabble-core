@@ -13,8 +13,8 @@ pub struct CheckedBoardSquare {
 impl CheckedBoardSquare {
     pub fn to_checked_row_square(&self, direction: Direction) -> CheckedRowSquare {
         let cross_checks = match direction {
-            Direction::Horizontal => self.horizontal_cross_checks.clone(),
-            Direction::Vertical => self.vertical_cross_checks.clone(),
+            Direction::Horizontal => self.vertical_cross_checks.clone(),
+            Direction::Vertical => self.horizontal_cross_checks.clone(),
         };
         let is_anchor =
             self.horizontal_cross_checks.is_some() || self.vertical_cross_checks.is_some();
@@ -56,12 +56,6 @@ pub struct CheckedRowSquare {
     pub cross_checks: Option<CrossChecks>,
     /// Need to explicitly track whether a square is an anchor since we only have one of the cross checks
     pub is_anchor: bool,
-}
-
-impl CheckedRowSquare {
-    pub fn is_anchor(&self) -> bool {
-        self.cross_checks.is_some()
-    }
 }
 
 impl Default for CheckedRowSquare {

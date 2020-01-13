@@ -16,6 +16,12 @@ impl ScrabbleRack {
         *self.tiles.entry(tile).or_insert(0) += 1;
     }
 
+    pub fn add_tiles(&mut self, tiles: &str) {
+        for tile in tiles.chars() {
+            self.add_tile(tile);
+        }
+    }
+
     pub fn take_tile(&mut self, tile: char) -> Result<(), ()> {
         match self.tiles.entry(tile).or_insert(0) {
             count if *count > 0 => {

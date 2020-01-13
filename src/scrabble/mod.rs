@@ -1,14 +1,18 @@
+use std::slice::Iter;
+
+pub use crate::scrabble::scoring::{letter_value, ScoreModifier};
+use crate::scrabble::scrabble_board::CheckedScrabbleBoard;
+pub use crate::scrabble::scrabble_board::{Position, ScrabbleBoard, BOARD_SIZE};
+pub use crate::scrabble::scrabble_board_square::{CheckedBoardSquare, CheckedRowSquare};
+pub use crate::scrabble::scrabble_rack::ScrabbleRack;
+
 mod cross_checks;
+mod scoring;
 mod scrabble_board;
 mod scrabble_board_square;
 mod scrabble_rack;
 
-use crate::scrabble::scrabble_board::CheckedScrabbleBoard;
-pub use crate::scrabble::scrabble_board::{ScrabbleBoard, BOARD_SIZE};
-pub use crate::scrabble::scrabble_board_square::{CheckedBoardSquare, CheckedRowSquare};
-pub use crate::scrabble::scrabble_rack::ScrabbleRack;
-use std::slice::Iter;
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Direction {
     Horizontal,
     Vertical,
@@ -21,11 +25,12 @@ impl Direction {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
 pub struct ScrabblePlay {
-    pub start_position: (usize, usize),
+    pub start: Position,
     pub direction: Direction,
     pub word: String,
+    pub score: u32,
 }
 
 #[derive(Debug, Clone)]

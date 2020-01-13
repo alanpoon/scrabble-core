@@ -4,9 +4,9 @@ use crate::scrabble::Direction;
 #[derive(Debug, Clone)]
 pub struct CheckedBoardSquare {
     pub tile: Option<char>,
-    /// The checks to use when working with a horizontal solving row (determined by vertical neighbors):
+    /// The checks determined by horizontal neighbors (for use while solving a vertical row ):
     pub horizontal_cross_checks: Option<CrossChecks>,
-    /// The checks to use when working with a vertical solving row (determined by horizontal neighbors):
+    /// The checks determined by vertical neighbors (for use while solving a horizontal row):
     pub vertical_cross_checks: Option<CrossChecks>,
 }
 
@@ -16,9 +16,26 @@ impl CheckedBoardSquare {
             Direction::Horizontal => self.horizontal_cross_checks.clone(),
             Direction::Vertical => self.vertical_cross_checks.clone(),
         };
+        let is_anchor =
+            self.horizontal_cross_checks.is_some() || self.vertical_cross_checks.is_some();
         CheckedRowSquare {
             tile: self.tile,
             cross_checks,
+            is_anchor,
+        }
+    }
+
+    pub fn checks(&self, neighbors: Direction) -> &Option<CrossChecks> {
+        match neighbors {
+            Direction::Horizontal => &self.horizontal_cross_checks,
+            Direction::Vertical => &self.vertical_cross_checks,
+        }
+    }
+
+    pub fn checks_mut(&mut self, neighbors: Direction) -> &mut Option<CrossChecks> {
+        match neighbors {
+            Direction::Horizontal => &mut self.horizontal_cross_checks,
+            Direction::Vertical => &mut self.vertical_cross_checks,
         }
     }
 }
@@ -37,6 +54,8 @@ impl Default for CheckedBoardSquare {
 pub struct CheckedRowSquare {
     pub tile: Option<char>,
     pub cross_checks: Option<CrossChecks>,
+    /// Need to explicitly track whether a square is an anchor since we only have one of the cross checks
+    pub is_anchor: bool,
 }
 
 impl CheckedRowSquare {
@@ -50,27 +69,7 @@ impl Default for CheckedRowSquare {
         CheckedRowSquare {
             tile: None,
             cross_checks: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum ScoreModifier {
-    Plain,
-    DoubleLetter,
-    TripleLetter,
-    DoubleWord,
-    TripleWord,
-}
-
-impl ScoreModifier {
-    pub fn as_char(&self) -> char {
-        match self {
-            ScoreModifier::Plain => ' ',
-            ScoreModifier::DoubleLetter => '2',
-            ScoreModifier::TripleLetter => '3',
-            ScoreModifier::DoubleWord => '4',
-            ScoreModifier::TripleWord => '6',
+            is_anchor: false,
         }
     }
 }

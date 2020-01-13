@@ -61,6 +61,8 @@ impl Trie {
     }
 }
 
+/// Note: A DawgNode is really just the first DawgEdge in a block associated with a specific node
+/// So A DawgNodeIndex is actually a pointer to a DawgEdge
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
 pub struct DawgNodeIndex(pub usize);
 
@@ -75,21 +77,6 @@ pub struct Dawg {
 }
 
 impl Dawg {
-    //        pub fn for_children<F>(&self, node: DawgNodeIndex, f: F)
-    //            where
-    //                F: Fn((DawgNodeIndex, char)),
-    //        {
-    //            let mut edge = &self[node];
-    //            loop {
-    //                if let Some(target) = edge.target <
-    //                    f(target, edge.letter);
-    //                if edge.node_terminator {
-    //                    break;
-    //                }
-    //                offset += 1;
-    //            }
-    //        }
-
     pub fn contains(&self, word: &str) -> bool {
         let mut target = Some(DawgNodeIndex(0));
         for ch in word.chars() {
@@ -109,6 +96,28 @@ impl Dawg {
             }
         }
         true
+    }
+
+    pub fn apply_to_children<F>(&self, node: DawgNodeIndex, mut f: F)
+    where
+        F: FnMut(&DawgEdge),
+    {
+        let mut node_index = node;
+
+        loop {
+            let edge = &self[node_index];
+            f(edge);
+            if edge.node_terminator {
+                break;
+            }
+            node_index = node_index.next();
+        }
+    }
+
+    pub fn children(&self, node: DawgNodeIndex) -> Vec<char> {
+        let mut result: Vec<char> = Vec::new();
+        self.apply_to_children(node, |edge| (&mut result).push(edge.letter));
+        result
     }
 }
 
@@ -158,27 +167,6 @@ impl From<u64> for DawgEdge {
     }
 }
 
-//pub struct DawgBuilderNode<'a> {
-//    edges: Vec<DawgBuilderEdge<'a>>,
-//}
-//
-//pub struct DawgBuilderEdge<'a> {
-//    letter: char,
-//    //    target:
-//}
-//
-
-//pub struct Dawg {
-//    edges: Vec<DawgEdge>,
-//}
-//
-//impl Dawg {
-//    pub fn children(&self, node_start: usize) -> &[DawgEdge] {
-//        let node_end = node_start + self.edges[node_start].node_size.unwrap();
-//        &self.edges[node_start..node_end]
-//    }
-//}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -198,5 +186,11 @@ mod test {
         let dawg = Dawg { edges };
         assert!(dawg.contains("hello"));
         assert!(!dawg.contains("helloworld"));
+
+        let root_children: String = dawg.children(DawgNodeIndex(0)).iter().collect();
+        assert_eq!(root_children, "abcdefghijklmnopqrstuvwxyz")
     }
+
+    #[test]
+    fn test_load_dawg_2() {}
 }

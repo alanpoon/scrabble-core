@@ -3,19 +3,6 @@ use std::fs;
 use crate::data_structures::{Dawg, DawgEdge};
 use std::mem::size_of;
 
-//pub fn load_vocab() -> Vec<String> {
-//    let filename = "assets/scrabble_words.txt";
-//    fs::read_to_string(filename)
-//        .unwrap()
-//        .lines()
-//        .map(|x| x.to_string())
-//        .collect()
-//}
-//
-//pub fn load_vocab_trie(vocab: Vec<String>) -> Trie {
-//    Trie::new(vocab.iter().map(AsRef::as_ref).collect())
-//}
-
 pub fn load_dawg() -> Dawg {
     let bytes = fs::read("assets/dawg.bin").expect("Couldn't load asserts/dawg.bin");
     let mut edges: Vec<DawgEdge> = Vec::new();
@@ -36,18 +23,6 @@ mod test {
     use super::*;
     use crate::data_structures::DawgNodeIndex;
 
-    //    #[test]
-    //    fn test_load_vocab() {
-    //        assert_eq!(load_vocab().len(), 279_496)
-    //    }
-    //
-    //    #[test]
-    //    fn test_load_vocab_trie() {
-    //        let vocab = load_vocab();
-    //        let vocab_trie = load_vocab_trie(vocab);
-    //        assert!(vocab_trie.contains("zymosimeter"));
-    //        assert!(!vocab_trie.contains("zymosometer"))
-    //    }
     #[test]
     fn test_load_dawg_data() {
         let dawg_data = load_dawg().edges;

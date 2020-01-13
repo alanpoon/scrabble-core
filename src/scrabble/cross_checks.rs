@@ -11,12 +11,12 @@ pub struct CrossChecks {
 }
 
 impl CrossChecks {
-    pub fn allow(&mut self, ch: char) {
+    pub fn set_allowed(&mut self, ch: char) {
         let offset = (ch as u32) - ('a' as u32);
         self.allowed |= 1 << offset;
     }
 
-    pub fn is_allowed(&self, ch: char) -> bool {
+    pub fn allows(&self, ch: char) -> bool {
         let offset = (ch as u32) - ('a' as u32);
         ((1 << offset) & self.allowed) > 0
     }
@@ -40,7 +40,7 @@ impl CrossChecks {
                 dawg.apply_to_child_edges(checked_node, |edge| {
                     if let Some(final_edge) = dawg.walk_from_prior_edge(edge, following) {
                         if final_edge.word_terminator {
-                            checks.allow(edge.letter);
+                            checks.set_allowed(edge.letter);
                         }
                     }
                 });
@@ -99,18 +99,18 @@ mod test {
     fn test_cross_checks() {
         let mut checks = CrossChecks::default();
         for c in (b'a'..b'z').map(char::from) {
-            assert!(!checks.is_allowed(c));
-            checks.allow(c);
-            assert!(checks.is_allowed(c));
+            assert!(!checks.allows(c));
+            checks.set_allowed(c);
+            assert!(checks.allows(c));
         }
     }
 
     #[test]
     fn test_display() {
         let mut checks = CrossChecks::default();
-        checks.allow('a');
-        checks.allow('b');
-        checks.allow('z');
+        checks.set_allowed('a');
+        checks.set_allowed('b');
+        checks.set_allowed('z');
         assert_eq!(checks.letters(), "abz");
     }
 

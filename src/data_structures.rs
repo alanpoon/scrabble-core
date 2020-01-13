@@ -1,63 +1,4 @@
-//use std::collections::HashMap;
 use std::ops::Index;
-
-//#[derive(Debug, Clone)]
-//pub struct TrieNode {
-//    pub children: HashMap<char, TrieNode>,
-//    pub terminal: bool,
-//}
-//
-//impl TrieNode {
-//    fn new() -> TrieNode {
-//        TrieNode {
-//            children: HashMap::new(),
-//            terminal: false,
-//        }
-//    }
-//}
-//
-//#[derive(Debug)]
-//pub struct Trie {
-//    nodes: Vec<TrieNode>,
-//}
-//
-//impl Trie {
-//    pub fn new(words: Vec<&str>) -> Trie {
-//        let mut nodes: Vec<TrieNode> = vec![TrieNode {
-//            children: HashMap::new(),
-//            terminal: false,
-//        }];
-//        for word in words {
-//            let mut current_node = &mut nodes[0];
-//            for (i, letter) in word.chars().enumerate() {
-//                current_node = current_node
-//                    .children
-//                    .entry(letter)
-//                    .or_insert(TrieNode::new());
-//                if i == word.len() - 1 {
-//                    current_node.terminal = true;
-//                }
-//            }
-//        }
-//        Trie { nodes }
-//    }
-//
-//    /// Returns the first node  of the Trie unwrapped; this is safe since there will always be a root node
-//    pub fn root(&self) -> &TrieNode {
-//        self.nodes.first().unwrap()
-//    }
-//
-//    pub fn contains(&self, letters: &str) -> bool {
-//        let mut node = self.root();
-//        for ch in letters.chars() {
-//            match node.children.get(&ch) {
-//                Some(subnode) => node = subnode,
-//                None => return false,
-//            }
-//        }
-//        true
-//    }
-//}
 
 /// Note: A DawgNode is really just the first DawgEdge in a block associated with a specific node
 /// So A DawgNodeIndex is actually a pointer to a DawgEdge
@@ -110,17 +51,6 @@ impl Dawg {
 
     pub fn contains(&self, word: &str) -> bool {
         self.walk_from_node(self.root(), word).is_some()
-        //        let mut maybe_node = Some(self.root());
-        //        for ch in word.chars() {
-        //            if let Some(node) = maybe_node {
-        //                if let Some(edge) = self.leaving_edge(node, ch) {
-        //                    maybe_node = edge.target;
-        //                    continue;
-        //                }
-        //            };
-        //            return false; // Couldn't finish the path
-        //        }
-        //        true
     }
 
     pub fn leaving_edge(&self, node: DawgNodeIndex, ch: char) -> Option<&DawgEdge> {
@@ -194,14 +124,14 @@ impl From<u64> for DawgEdge {
         const NODE_TERMINATOR_BIT_OFFSET: u64 = 16;
         const TARGET_BIT_OFFSET: u64 = 32;
 
-        const MISSING_TARGET_FLAG: usize = 2 ^ 32 - 1;
+        const MISSING_TARGET_FLAG: u32 = !0; // all ones
 
         let letter = (input >> LETTER_OFFSET) as u8 as char;
         let word_terminator = (input >> WORD_TERMINATOR_BIT_OFFSET) as u8 != 0;
         let node_terminator = (input >> NODE_TERMINATOR_BIT_OFFSET) as u8 != 0;
-        let target = match (input >> TARGET_BIT_OFFSET) as usize {
+        let target = match (input >> TARGET_BIT_OFFSET) as u32 {
             MISSING_TARGET_FLAG => None,
-            other => Some(DawgNodeIndex(other)),
+            other => Some(DawgNodeIndex(other as usize)),
         };
 
         Self {
@@ -217,14 +147,6 @@ impl From<u64> for DawgEdge {
 mod test {
     use super::*;
     use crate::loading::load_dawg;
-
-    //    #[test]
-    //    fn test_trie_new() {
-    //        let words = vec!["hello", "world"];
-    //        let trie = Trie::new(words);
-    //        assert!(trie.contains("hello"));
-    //        assert!(!trie.contains("goodbye"));
-    //    }
 
     #[test]
     fn test_load_dawg() {

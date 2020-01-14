@@ -1,6 +1,5 @@
 use std::slice::Iter;
 
-use crate::data_structures::Dawg;
 pub use crate::scrabble::scoring::{letter_value, ScoreModifier};
 pub use crate::scrabble::scrabble_board::{
     CheckedScrabbleBoard, Position, ScrabbleBoard, BOARD_SIZE,

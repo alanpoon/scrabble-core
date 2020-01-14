@@ -1,4 +1,4 @@
-use crate::data_structures::{Dawg, DawgEdge, DawgNodeIndex};
+use crate::data_structures::{Dawg, DawgEdge, DawgNodeIndex, DAWG_EDGE_TO_ROOT};
 use crate::scrabble::{
     letter_value, CheckedRowSquare, CheckedScrabbleBoard, Direction, Position, ScoreModifier,
     ScrabbleBoard, ScrabblePlay, ScrabbleRack, BOARD_SIZE,
@@ -64,13 +64,20 @@ impl<'a> SolvingAnchor<'a> {
         let mut plays: Vec<ScrabblePlay> = Vec::new();
         let mut rack = rack.clone();
         let mut partial_word = self.initial_partial_word();
+        let initial_limit = self.initial_limit();
+
+        //        println!(
+        //            "SolvingAnchor.plays(): {:?} in aisle {} with anchor index {}, initial limit {}, and partial_word \"{}\" ",
+        //            self.solving_row.direction, self.solving_row.index, self.anchor_index, initial_limit, partial_word,
+        //        );
 
         self.add_plays_for_left(
             &mut plays,
             &mut rack,
             &mut partial_word,
+            DAWG_EDGE_TO_ROOT,
             self.dawg.root(),
-            self.initial_limit(),
+            initial_limit,
         );
         plays
     }
@@ -109,23 +116,42 @@ impl<'a> SolvingAnchor<'a> {
         plays: &mut Vec<ScrabblePlay>,
         rack: &mut ScrabbleRack,
         partial_word: &mut String,
+        edge_to_node: &DawgEdge,
         node: DawgNodeIndex,
         limit: usize,
     ) {
-        //println!(
-        //    "Initial-extending {:?} in aisle {} with partial_word \"{}\" starting at cross {}",
-        //    self.solving_row.direction, self.solving_row.index, partial_word, starting_index,
-        //);
-        self.extend_right(plays, rack, partial_word, node, self.anchor_index);
+        //        println!(
+        //            "add_plays_for_left: {:?} in aisle {} with anchor index {} and partial_word \"{}\" ",
+        //            self.solving_row.direction, self.solving_row.index, self.anchor_index, partial_word,
+        //        );
+        self.extend_right(
+            plays,
+            rack,
+            partial_word,
+            edge_to_node,
+            node,
+            self.anchor_index,
+        );
         if limit > 0 {
             self.dawg.apply_to_child_edges(node, |edge| {
-                let ch = edge.letter;
-                if rack.take_tile(ch).is_ok() {
-                    partial_word.push(ch);
-                    self.add_plays_for_left(plays, rack, partial_word, node, limit - 1);
-                    partial_word.pop();
-                    rack.add_tile(ch);
+                if edge.target.is_none() {
+                    return;
                 }
+                let ch = edge.letter;
+                if rack.take_tile(ch).is_err() {
+                    return;
+                }
+                partial_word.push(ch);
+                self.add_plays_for_left(
+                    plays,
+                    rack,
+                    partial_word,
+                    edge,
+                    edge.target.unwrap(),
+                    limit - 1,
+                );
+                partial_word.pop();
+                rack.add_tile(ch);
             });
         }
     }
@@ -135,16 +161,21 @@ impl<'a> SolvingAnchor<'a> {
         plays: &mut Vec<ScrabblePlay>,
         rack: &mut ScrabbleRack,
         partial_word: &mut String,
+        edge_to_node: &DawgEdge,
         node: DawgNodeIndex,
         next_tile_index: usize,
     ) {
+        //        println!(
+        //            "extend_right: {:?} in aisle {} with partial_word \"{}\" and next_tile_index {} ",
+        //            self.solving_row.direction, self.solving_row.index, partial_word, next_tile_index
+        //        );
         if next_tile_index >= BOARD_SIZE {
             return;
         }
         let next_square = &self.solving_row.squares[next_tile_index];
         if let Some(ch) = next_square.tile {
             if let Some(edge) = self.dawg.leaving_edge(node, ch) {
-                self.extend_using_edge(plays, rack, partial_word, node, next_tile_index, edge);
+                self.extend_using_edge(plays, rack, partial_word, next_tile_index, edge);
             }
         } else {
             self.dawg.apply_to_child_edges(node, |edge| {
@@ -158,7 +189,7 @@ impl<'a> SolvingAnchor<'a> {
                     .and_then(|checks| Some(checks.allows(ch)))
                     .unwrap_or(true);
                 if compatible {
-                    self.extend_using_edge(plays, rack, partial_word, node, next_tile_index, edge);
+                    self.extend_using_edge(plays, rack, partial_word, next_tile_index, edge);
                 }
                 rack.add_tile(ch);
             })
@@ -170,14 +201,13 @@ impl<'a> SolvingAnchor<'a> {
         plays: &mut Vec<ScrabblePlay>,
         rack: &mut ScrabbleRack,
         partial_word: &mut String,
-        node: DawgNodeIndex,
-        next_tile_index: usize,
+        placement_index: usize,
         edge: &DawgEdge,
     ) {
         partial_word.push(edge.letter);
-        self.check_add_play(plays, partial_word, node, next_tile_index);
+        self.check_add_play(plays, partial_word, edge, placement_index + 1);
         if let Some(target) = edge.target {
-            self.extend_right(plays, rack, partial_word, target, next_tile_index + 1);
+            self.extend_right(plays, rack, partial_word, edge, target, placement_index + 1);
         }
         partial_word.pop();
     }
@@ -186,7 +216,7 @@ impl<'a> SolvingAnchor<'a> {
         &self,
         plays: &mut Vec<ScrabblePlay>,
         partial_word: &str,
-        node: DawgNodeIndex,
+        edge: &DawgEdge,
         next_square_index: usize,
     ) {
         if next_square_index < BOARD_SIZE
@@ -194,9 +224,20 @@ impl<'a> SolvingAnchor<'a> {
         {
             return; // there is a tile in the next square, so this partial_word isn't a valid play
         }
-        if self.dawg[node].word_terminator {
+        if next_square_index < self.anchor_index + 1 {
+            return; // Haven't placed anything in the anchor index
+        }
+        //        println!(
+        //            "Looking for play with word \"{}\" ending at {}",
+        //            partial_word,
+        //            next_square_index - 1
+        //        );
+        //        dbg!(&edge);
+
+        if edge.word_terminator {
             let start = next_square_index - partial_word.len();
             let play = self.solving_row.play(start, partial_word.to_string());
+            //            println!(" * Found play: {:?} ", play);
             plays.push(play)
         }
     }

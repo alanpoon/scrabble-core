@@ -28,24 +28,10 @@ impl Position {
         }
     }
 
-    pub fn aisle(&self, direction: Direction) -> usize {
-        match direction {
-            Direction::Horizontal => self.row,
-            Direction::Vertical => self.col,
-        }
-    }
-
     pub fn cross(&self, direction: Direction) -> usize {
         match direction {
             Direction::Horizontal => self.col,
             Direction::Vertical => self.row,
-        }
-    }
-
-    pub fn set_aisle(&mut self, direction: Direction, value: usize) {
-        match direction {
-            Direction::Horizontal => self.row = value,
-            Direction::Vertical => self.col = value,
         }
     }
 
@@ -64,19 +50,6 @@ impl Position {
             },
             Direction::Vertical => Position {
                 row: self.row + 1,
-                ..*self
-            },
-        }
-    }
-
-    pub fn step_multi(&self, direction: Direction, steps: isize) -> Position {
-        match direction {
-            Direction::Horizontal => Position {
-                col: (self.col as isize + steps) as usize,
-                ..*self
-            },
-            Direction::Vertical => Position {
-                row: (self.col as isize + steps) as usize,
                 ..*self
             },
         }

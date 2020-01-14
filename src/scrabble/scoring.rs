@@ -59,16 +59,6 @@ impl ScoreModifier {
         }
     }
 
-    pub fn letter_or_word_multiplier(&self) -> u32 {
-        match self {
-            ScoreModifier::DoubleLetter => 2,
-            ScoreModifier::TripleLetter => 3,
-            ScoreModifier::DoubleWord => 2,
-            ScoreModifier::TripleWord => 3,
-            ScoreModifier::Plain => 1,
-        }
-    }
-
     pub fn as_char(&self) -> char {
         match self {
             ScoreModifier::Plain => ' ',

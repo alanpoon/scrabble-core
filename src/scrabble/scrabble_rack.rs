@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 const N_LETTERS: usize = 26;
 const N_TILES: usize = N_LETTERS + 1;
 const BLANK_TILE_INDEX: usize = 26;
@@ -18,7 +16,7 @@ impl ScrabbleRack {
 
     fn tile_index(tile: char) -> usize {
         const A_INDEX: u8 = 97;
-        let char_offset = ((tile as u8) - A_INDEX) as usize;
+        let char_offset = (tile as u8).wrapping_sub(A_INDEX) as usize;
         match char_offset {
             offset if offset < N_LETTERS => offset,
             _ => BLANK_TILE_INDEX,

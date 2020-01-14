@@ -82,12 +82,6 @@ impl Dawg {
             node_index = node_index.next();
         }
     }
-
-    pub fn children(&self, node: DawgNodeIndex) -> Vec<char> {
-        let mut result: Vec<char> = Vec::new();
-        self.apply_to_child_edges(node, |edge| (&mut result).push(edge.letter));
-        result
-    }
 }
 
 impl Index<DawgNodeIndex> for Dawg {
@@ -145,8 +139,9 @@ impl From<u64> for DawgEdge {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::loading::load_dawg;
+
+    use super::*;
 
     #[test]
     fn test_load_dawg() {
@@ -154,7 +149,9 @@ mod test {
         assert!(dawg.contains("hello"));
         assert!(!dawg.contains("helloworld"));
 
-        let root_children: String = dawg.children(dawg.root()).iter().collect();
+        let mut root_children: Vec<char> = Vec::new();
+        dawg.apply_to_child_edges(dawg.root(), |edge| (&mut root_children).push(edge.letter));
+        let root_children: String = root_children.iter().collect();
         assert_eq!(root_children, "abcdefghijklmnopqrstuvwxyz")
     }
 }

@@ -1,7 +1,7 @@
-use crate::data_structures::{Dawg, DawgEdge, DawgNodeIndex, DAWG_EDGE_TO_ROOT};
+use crate::data_structures::{Dawg, DawgEdge, DawgNodeIndex};
 use crate::scrabble::{
     letter_value, CheckedRowSquare, CheckedScrabbleBoard, Direction, Position, ScoreModifier,
-    ScrabbleBoard, ScrabblePlay, ScrabbleRack, BOARD_SIZE,
+    ScrabblePlay, ScrabbleRack, BOARD_SIZE,
 };
 
 #[derive(Debug)]
@@ -71,7 +71,7 @@ impl<'a> SolvingAnchor<'a> {
         // TODO: Put partial word, node, and edge-to-node into a single struct that gets passed around?
         let mut plays: Vec<ScrabblePlay> = Vec::new();
         let mut rack = rack.clone();
-        let mut partial_word_node = self.initial_partial_word_node();
+        let partial_word_node = self.initial_partial_word_node();
         let mut partial_word = partial_word_node.0;
 
         let initial_limit = self.initial_limit();
@@ -82,7 +82,6 @@ impl<'a> SolvingAnchor<'a> {
                 &mut plays,
                 &mut rack,
                 &mut partial_word,
-                DAWG_EDGE_TO_ROOT,
                 node.unwrap(),
                 initial_limit,
             );
@@ -127,18 +126,10 @@ impl<'a> SolvingAnchor<'a> {
         plays: &mut Vec<ScrabblePlay>,
         rack: &mut ScrabbleRack,
         partial_word: &mut String,
-        edge_to_node: &DawgEdge,
         node: DawgNodeIndex,
         limit: usize,
     ) {
-        self.extend_right(
-            plays,
-            rack,
-            partial_word,
-            edge_to_node,
-            node,
-            self.anchor_index,
-        );
+        self.extend_right(plays, rack, partial_word, node, self.anchor_index);
         if limit > 0 {
             self.dawg.apply_to_child_edges(node, |edge| {
                 if edge.target.is_none() {
@@ -150,14 +141,7 @@ impl<'a> SolvingAnchor<'a> {
                     return;
                 }
                 partial_word.push(ch);
-                self.add_plays_for_left(
-                    plays,
-                    rack,
-                    partial_word,
-                    edge,
-                    edge.target.unwrap(),
-                    limit - 1,
-                );
+                self.add_plays_for_left(plays, rack, partial_word, edge.target.unwrap(), limit - 1);
                 partial_word.pop();
                 rack.add_tile(tile.unwrap());
             });
@@ -169,7 +153,6 @@ impl<'a> SolvingAnchor<'a> {
         plays: &mut Vec<ScrabblePlay>,
         rack: &mut ScrabbleRack,
         partial_word: &mut String,
-        edge_to_node: &DawgEdge,
         node: DawgNodeIndex,
         next_tile_index: usize,
     ) {
@@ -212,7 +195,7 @@ impl<'a> SolvingAnchor<'a> {
         partial_word.push(edge.letter);
         self.check_add_play(plays, partial_word, edge, placement_index + 1);
         if let Some(target) = edge.target {
-            self.extend_right(plays, rack, partial_word, edge, target, placement_index + 1);
+            self.extend_right(plays, rack, partial_word, target, placement_index + 1);
         }
         partial_word.pop();
     }

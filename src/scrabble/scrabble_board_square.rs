@@ -25,13 +25,6 @@ impl CheckedBoardSquare {
         }
     }
 
-    pub fn checks(&self, neighbors: Direction) -> &Option<CrossChecks> {
-        match neighbors {
-            Direction::Horizontal => &self.horizontal_cross_checks,
-            Direction::Vertical => &self.vertical_cross_checks,
-        }
-    }
-
     pub fn checks_mut(&mut self, neighbors: Direction) -> &mut Option<CrossChecks> {
         match neighbors {
             Direction::Horizontal => &mut self.horizontal_cross_checks,

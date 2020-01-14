@@ -32,12 +32,16 @@ impl SolvingAisle {
         let mut score = 0;
         let mut new_word_score = 0;
         let mut new_word_multiplier = 1;
+        let mut tiles_used: u8 = 0;
 
         for (i, ch) in word.chars().enumerate() {
             let square = &self.squares[start_word_index + i];
             let score_modifier = match square.tile {
                 Some(_) => ScoreModifier::Plain,
-                None => ScoreModifier::at(position),
+                None => {
+                    tiles_used += 1;
+                    ScoreModifier::at(position)
+                }
             };
             let word_multiplier = score_modifier.word_multiplier();
             let ch_value = score_modifier.letter_multiplier() * letter_value(ch);
@@ -49,6 +53,9 @@ impl SolvingAisle {
             position = position.step(self.direction);
         }
         score += new_word_score * new_word_multiplier;
+        if tiles_used == 7 {
+            score += 50;
+        }
         score
     }
 }
@@ -61,28 +68,29 @@ pub struct SolvingAnchor<'a> {
 
 impl<'a> SolvingAnchor<'a> {
     pub fn plays(&self, rack: &ScrabbleRack) -> Vec<ScrabblePlay> {
+        // TODO: Put partial word, node, and edge-to-node into a single struct that gets passed around?
         let mut plays: Vec<ScrabblePlay> = Vec::new();
         let mut rack = rack.clone();
-        let mut partial_word = self.initial_partial_word();
+        let mut partial_word_node = self.initial_partial_word_node();
+        let mut partial_word = partial_word_node.0;
+
         let initial_limit = self.initial_limit();
 
-        //        println!(
-        //            "SolvingAnchor.plays(): {:?} in aisle {} with anchor index {}, initial limit {}, and partial_word \"{}\" ",
-        //            self.solving_row.direction, self.solving_row.index, self.anchor_index, initial_limit, partial_word,
-        //        );
-
-        self.add_plays_for_left(
-            &mut plays,
-            &mut rack,
-            &mut partial_word,
-            DAWG_EDGE_TO_ROOT,
-            self.dawg.root(),
-            initial_limit,
-        );
+        let node = partial_word_node.1;
+        if node.is_some() {
+            self.add_plays_for_left(
+                &mut plays,
+                &mut rack,
+                &mut partial_word,
+                DAWG_EDGE_TO_ROOT,
+                node.unwrap(),
+                initial_limit,
+            );
+        }
         plays
     }
 
-    fn initial_partial_word(&self) -> String {
+    fn initial_partial_word_node(&self) -> (String, Option<DawgNodeIndex>) {
         let first_filled_index = {
             let mut index: Option<usize> = None;
             for possible_first in (0..self.anchor_index).rev() {
@@ -95,10 +103,13 @@ impl<'a> SolvingAnchor<'a> {
         };
 
         let mut partial_word = String::with_capacity(BOARD_SIZE);
+        let mut node = Some(self.dawg.root());
         for index in first_filled_index..self.anchor_index {
-            partial_word.push(self.solving_row.squares[index].tile.unwrap())
+            let ch = self.solving_row.squares[index].tile.unwrap();
+            partial_word.push(ch);
+            node = node.and_then(|i| self.dawg.leaving_edge(i, ch).and_then(|edge| edge.target))
         }
-        partial_word
+        (partial_word, node)
     }
 
     fn initial_limit(&self) -> usize {
@@ -120,10 +131,6 @@ impl<'a> SolvingAnchor<'a> {
         node: DawgNodeIndex,
         limit: usize,
     ) {
-        //        println!(
-        //            "add_plays_for_left: {:?} in aisle {} with anchor index {} and partial_word \"{}\" ",
-        //            self.solving_row.direction, self.solving_row.index, self.anchor_index, partial_word,
-        //        );
         self.extend_right(
             plays,
             rack,
@@ -138,7 +145,8 @@ impl<'a> SolvingAnchor<'a> {
                     return;
                 }
                 let ch = edge.letter;
-                if rack.take_tile(ch).is_err() {
+                let tile = rack.take_tile(ch);
+                if tile.is_err() {
                     return;
                 }
                 partial_word.push(ch);
@@ -151,7 +159,7 @@ impl<'a> SolvingAnchor<'a> {
                     limit - 1,
                 );
                 partial_word.pop();
-                rack.add_tile(ch);
+                rack.add_tile(tile.unwrap());
             });
         }
     }
@@ -165,10 +173,6 @@ impl<'a> SolvingAnchor<'a> {
         node: DawgNodeIndex,
         next_tile_index: usize,
     ) {
-        //        println!(
-        //            "extend_right: {:?} in aisle {} with partial_word \"{}\" and next_tile_index {} ",
-        //            self.solving_row.direction, self.solving_row.index, partial_word, next_tile_index
-        //        );
         if next_tile_index >= BOARD_SIZE {
             return;
         }
@@ -180,7 +184,8 @@ impl<'a> SolvingAnchor<'a> {
         } else {
             self.dawg.apply_to_child_edges(node, |edge| {
                 let ch = edge.letter;
-                if rack.take_tile(ch).is_err() {
+                let tile = rack.take_tile(ch);
+                if tile.is_err() {
                     return;
                 }
                 let compatible = next_square
@@ -191,7 +196,7 @@ impl<'a> SolvingAnchor<'a> {
                 if compatible {
                     self.extend_using_edge(plays, rack, partial_word, next_tile_index, edge);
                 }
-                rack.add_tile(ch);
+                rack.add_tile(tile.unwrap());
             })
         }
     }
@@ -227,17 +232,10 @@ impl<'a> SolvingAnchor<'a> {
         if next_square_index < self.anchor_index + 1 {
             return; // Haven't placed anything in the anchor index
         }
-        //        println!(
-        //            "Looking for play with word \"{}\" ending at {}",
-        //            partial_word,
-        //            next_square_index - 1
-        //        );
-        //        dbg!(&edge);
 
         if edge.word_terminator {
             let start = next_square_index - partial_word.len();
             let play = self.solving_row.play(start, partial_word.to_string());
-            //            println!(" * Found play: {:?} ", play);
             plays.push(play)
         }
     }

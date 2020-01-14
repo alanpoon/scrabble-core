@@ -23,7 +23,7 @@ fn main() {
     println!("Time elapsed in vocab_trie.contains() is: {:?}", duration);
 
     let mut rack = ScrabbleRack::new();
-    rack.add_tiles("bcgeave");
+    rack.add_tiles("abcdef ");
     let mut board = ScrabbleBoard::default();
     board.add_word("hello", Position { row: 7, col: 7 }, Direction::Horizontal);
     println!("{}", board.display());

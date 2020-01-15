@@ -1,8 +1,41 @@
-use crate::scrabble::scrabble_board::Position;
+use crate::scrabble::play_generation::GenerationAisle;
+use crate::scrabble::util::{Position, BLANK_TILE_CHAR, EMPTY_SQUARE_CHAR};
 
-pub fn letter_value(letter: char) -> u32 {
+pub fn score_play(aisle: &GenerationAisle, start_word_index: usize, word: &str) -> i32 {
+    let mut position = aisle.position(start_word_index);
+    let mut score = 0_i32;
+    let mut new_word_score = 0;
+    let mut new_word_multiplier = 1;
+    let mut tiles_used: u8 = 0;
+
+    for (i, ch) in word.chars().enumerate() {
+        let square = &aisle.squares[start_word_index + i];
+        let score_modifier = match square.tile {
+            Some(_) => ScoreModifier::Plain,
+            None => {
+                tiles_used += 1;
+                ScoreModifier::at(position)
+            }
+        };
+        let word_multiplier = score_modifier.word_multiplier();
+        let ch_value = score_modifier.letter_multiplier() * letter_value(ch);
+        new_word_score += ch_value;
+        new_word_multiplier *= word_multiplier;
+        if let Some(cross_checks) = &square.cross_checks {
+            score += (cross_checks.cross_sum + ch_value) * word_multiplier;
+        }
+        position = position.step(aisle.direction);
+    }
+    score += new_word_score * new_word_multiplier;
+    if tiles_used == 7 {
+        score += 50;
+    }
+    score
+}
+
+pub fn letter_value(letter: char) -> i32 {
     match letter {
-        ' ' => 0,
+        BLANK_TILE_CHAR => 0,
         'a' => 1,
         'b' => 3,
         'c' => 3,
@@ -43,7 +76,7 @@ pub enum ScoreModifier {
 }
 
 impl ScoreModifier {
-    pub fn word_multiplier(&self) -> u32 {
+    pub fn word_multiplier(&self) -> i32 {
         match self {
             ScoreModifier::DoubleWord => 2,
             ScoreModifier::TripleWord => 3,
@@ -51,7 +84,7 @@ impl ScoreModifier {
         }
     }
 
-    pub fn letter_multiplier(&self) -> u32 {
+    pub fn letter_multiplier(&self) -> i32 {
         match self {
             ScoreModifier::DoubleLetter => 2,
             ScoreModifier::TripleLetter => 3,
@@ -61,7 +94,7 @@ impl ScoreModifier {
 
     pub fn as_char(&self) -> char {
         match self {
-            ScoreModifier::Plain => ' ',
+            ScoreModifier::Plain => EMPTY_SQUARE_CHAR,
             ScoreModifier::DoubleLetter => '2',
             ScoreModifier::TripleLetter => '3',
             ScoreModifier::DoubleWord => '4',

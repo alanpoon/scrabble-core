@@ -7,7 +7,7 @@ pub struct CrossChecks {
     /// allowed is a bitmask marking which letters are valid for the square
     allowed: u32,
     /// cross_sum should hold the total points associated with neighboring letters for the sake of score computation
-    pub cross_sum: u32,
+    pub cross_sum: i32,
 }
 
 impl CrossChecks {
@@ -50,7 +50,7 @@ impl CrossChecks {
         checks
     }
 
-    fn cross_sum(preceding: &str, following: &str) -> u32 {
+    fn cross_sum(preceding: &str, following: &str) -> i32 {
         preceding
             .chars()
             .chain(following.chars())

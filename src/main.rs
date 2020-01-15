@@ -1,14 +1,5 @@
+use scrabble::{board_from_plays, generate_plays, load_dawg, Direction, Position, ScrabblePlay};
 use std::time::Instant;
-
-use crate::loading::load_dawg;
-use crate::scrabble::{Direction, Position, ScrabbleBoard, ScrabbleRack};
-use crate::solving::PlayGenerator;
-//use crate::solving::PlayGenerator;
-
-mod data_structures;
-mod loading;
-mod scrabble;
-mod solving;
 
 fn main() {
     let start = Instant::now();
@@ -16,32 +7,19 @@ fn main() {
     let duration = start.elapsed();
     println!("Time elapsed in load_dawg() is: {:?}", duration);
 
-    let start = Instant::now();
-    assert!(dawg.contains("zymosimeter"));
-    assert!(!dawg.contains("zymosometer"));
-    let duration = start.elapsed();
-    println!("Time elapsed in vocab_trie.contains() is: {:?}", duration);
-
-    let mut rack = ScrabbleRack::new();
-    rack.add_tiles("abcdef ");
-    let mut board = ScrabbleBoard::default();
-    board.add_word("hello", Position { row: 7, col: 7 }, Direction::Horizontal);
+    let existing_plays: Vec<ScrabblePlay> = vec![ScrabblePlay {
+        start: Position { row: 7, col: 7 },
+        direction: Direction::Horizontal,
+        word: "hello".to_string(),
+    }];
+    let board = board_from_plays(&existing_plays);
     println!("{}", board.display());
 
     let start = Instant::now();
-    let checked_board = board.to_checked_board(&dawg);
-    let generator = PlayGenerator {
-        dawg,
-        checked_board,
-        rack: rack.clone(),
-    };
-    let mut plays = generator.plays();
-    plays.sort_by_key(|x| x.score);
-
+    let plays = generate_plays(&dawg, "abcdefg", &board, 20);
     let duration = start.elapsed();
-    for (play, _) in plays.iter().rev().zip(0..20) {
+    for play in plays.iter() {
         println!("{:?}", play);
     }
-
     println!("Time elapsed in generate_plays() is: {:?}", duration);
 }

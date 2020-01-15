@@ -1,60 +1,15 @@
-use crate::data_structures::Dawg;
-use crate::scrabble::cross_checks::CrossChecks;
-use crate::scrabble::scoring::ScoreModifier;
-use crate::scrabble::scrabble_board_square::{CheckedBoardSquare, CheckedRowSquare};
-use crate::scrabble::Direction;
 use std::collections::VecDeque;
 use std::ops::{Index, IndexMut};
 
+use crate::data_structures::Dawg;
+use crate::scrabble::checked_square::{CheckedAisleSquare, CheckedBoardSquare};
+use crate::scrabble::cross_checks::CrossChecks;
+use crate::scrabble::play_generation::ScrabblePlay;
+use crate::scrabble::scoring::ScoreModifier;
+use crate::scrabble::util::{Direction, Position};
+use crate::scrabble::util::{BLANK_TILE_CHAR, EMPTY_SQUARE_CHAR};
+
 pub const BOARD_SIZE: usize = 15;
-
-#[derive(Debug, Clone, Copy, PartialOrd, PartialEq, Ord, Eq)]
-pub struct Position {
-    pub row: usize,
-    pub col: usize,
-}
-
-impl Position {
-    pub fn from_aisle_cross(direction: Direction, aisle: usize, cross: usize) -> Position {
-        match direction {
-            Direction::Horizontal => Position {
-                row: aisle,
-                col: cross,
-            },
-            Direction::Vertical => Position {
-                row: cross,
-                col: aisle,
-            },
-        }
-    }
-
-    pub fn cross(&self, direction: Direction) -> usize {
-        match direction {
-            Direction::Horizontal => self.col,
-            Direction::Vertical => self.row,
-        }
-    }
-
-    pub fn set_cross(&mut self, direction: Direction, value: usize) {
-        match direction {
-            Direction::Horizontal => self.col = value,
-            Direction::Vertical => self.row = value,
-        }
-    }
-
-    pub fn step(&self, direction: Direction) -> Position {
-        match direction {
-            Direction::Horizontal => Position {
-                col: self.col + 1,
-                ..*self
-            },
-            Direction::Vertical => Position {
-                row: self.row + 1,
-                ..*self
-            },
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct ScrabbleBoard {
@@ -62,11 +17,51 @@ pub struct ScrabbleBoard {
 }
 
 impl ScrabbleBoard {
-    pub fn add_word(&mut self, word: &str, start: Position, direction: Direction) {
-        let mut start = start;
-        for ch in word.chars() {
-            self[start] = Some(ch);
-            start = start.step(direction);
+    pub fn from_contents(contents: &str) -> Result<ScrabbleBoard, ()> {
+        let parsed_contents = ScrabbleBoard::parse_contents(contents)?;
+
+        let mut board = ScrabbleBoard::default();
+        for (i, ch) in parsed_contents.iter().enumerate() {
+            let row = i / BOARD_SIZE;
+            let col = i % BOARD_SIZE;
+            *&mut board.squares[row][col] = *ch;
+        }
+        Ok(board)
+    }
+
+    fn parse_contents(contents: &str) -> Result<Vec<Option<char>>, ()> {
+        let tiles = ScrabbleBoard::parse_into_tiles(contents)?;
+        if tiles.len() != BOARD_SIZE * BOARD_SIZE {
+            Err(())
+        } else {
+            Ok(tiles)
+        }
+    }
+
+    fn parse_into_tiles(contents: &str) -> Result<Vec<Option<char>>, ()> {
+        let mut result: Vec<_> = Vec::with_capacity(BOARD_SIZE * BOARD_SIZE);
+        for ch in contents.chars() {
+            if ch == '\n' {
+                continue; // ignore newlines
+            }
+            let parsed_ch = match ch {
+                ch if ch.is_ascii_lowercase() => Some(ch),
+                BLANK_TILE_CHAR => Some(BLANK_TILE_CHAR),
+                EMPTY_SQUARE_CHAR => None,
+                _ => {
+                    return Err(());
+                }
+            };
+            result.push(parsed_ch);
+        }
+        Ok(result)
+    }
+
+    pub fn add_play(&mut self, play: &ScrabblePlay) {
+        let mut position = play.start;
+        for ch in play.word.chars() {
+            self[position] = Some(ch);
+            position = position.step(play.direction);
         }
     }
 
@@ -88,7 +83,7 @@ impl ScrabbleBoard {
 
     pub fn to_checked_board(&self, dawg: &Dawg) -> CheckedScrabbleBoard {
         let mut checked_board = CheckedScrabbleBoard::default();
-        for direction in Direction::iterator() {
+        for &direction in Direction::iterator() {
             for row in 0..BOARD_SIZE {
                 for col in 0..BOARD_SIZE {
                     let position = Position { row, col };
@@ -97,12 +92,12 @@ impl ScrabbleBoard {
                     if tile.is_some() {
                         square.tile = tile;
                     } else {
-                        let preceding = self.preceding(position, *direction);
-                        let following = self.following(position, *direction);
+                        let preceding = self.preceding(position, direction);
+                        let following = self.following(position, direction);
                         if preceding.is_some() || following.is_some() {
                             let preceding = CrossChecks::unwrap_or_empty(preceding.as_ref());
                             let following = CrossChecks::unwrap_or_empty(following.as_ref());
-                            *square.checks_mut(*direction) =
+                            *square.checks_mut(direction) =
                                 Some(CrossChecks::create(dawg, preceding, following));
                         }
                     }
@@ -182,8 +177,8 @@ pub struct CheckedScrabbleBoard {
 }
 
 impl CheckedScrabbleBoard {
-    pub fn aisle(&self, direction: Direction, index: usize) -> [CheckedRowSquare; BOARD_SIZE] {
-        let mut aisle_contents: [CheckedRowSquare; BOARD_SIZE] = Default::default();
+    pub fn aisle(&self, direction: Direction, index: usize) -> [CheckedAisleSquare; BOARD_SIZE] {
+        let mut aisle_contents: [CheckedAisleSquare; BOARD_SIZE] = Default::default();
         for cross in 0..BOARD_SIZE {
             let position = Position::from_aisle_cross(direction, index, cross);
             let square = &self[position];
@@ -260,8 +255,12 @@ mod test {
 6  2       2  6
 ";
         let mut board = ScrabbleBoard::default();
-        let start = Position { row: 7, col: 7 };
-        board.add_word("hello", start, Direction::Horizontal);
+        let play = ScrabblePlay {
+            start: Position { row: 7, col: 7 },
+            direction: Direction::Horizontal,
+            word: "hello".to_string(),
+        };
+        board.add_play(&play);
         let actual = board.display();
         assert_eq!(expected, actual);
     }
@@ -269,56 +268,64 @@ mod test {
     #[test]
     fn test_preceding_horizontal() {
         let mut board = ScrabbleBoard::default();
-        let word = "hello";
-        let start = Position { row: 7, col: 7 };
-        board.add_word(word, start, Direction::Horizontal);
+        let play = ScrabblePlay {
+            start: Position { row: 7, col: 7 },
+            direction: Direction::Horizontal,
+            word: "hello".to_string(),
+        };
+        board.add_play(&play);
 
-        let expected = word;
         let position = Position { row: 7, col: 12 };
         let actual = board.preceding(position, Direction::Horizontal);
         assert!(actual.is_some());
-        assert_eq!(expected, actual.unwrap());
+        assert_eq!("hello", actual.unwrap());
     }
 
     #[test]
     fn test_preceding_vertical() {
         let mut board = ScrabbleBoard::default();
-        let word = "hello";
-        let start = Position { row: 7, col: 7 };
-        board.add_word(word, start, Direction::Vertical);
+        let play = ScrabblePlay {
+            start: Position { row: 7, col: 7 },
+            direction: Direction::Vertical,
+            word: "hello".to_string(),
+        };
+        board.add_play(&play);
 
-        let expected = word;
         let position = Position { row: 12, col: 7 };
         let actual = board.preceding(position, Direction::Vertical);
         assert!(actual.is_some());
-        assert_eq!(expected, actual.unwrap());
+        assert_eq!("hello", actual.unwrap());
     }
 
     #[test]
     fn test_following_horizontal() {
         let mut board = ScrabbleBoard::default();
-        let word = "hello";
-        let start = Position { row: 7, col: 7 };
-        board.add_word(word, start, Direction::Horizontal);
+        let play = ScrabblePlay {
+            start: Position { row: 7, col: 7 },
+            direction: Direction::Horizontal,
+            word: "hello".to_string(),
+        };
+        board.add_play(&play);
 
-        let expected = word;
         let position = Position { row: 7, col: 6 };
         let actual = board.following(position, Direction::Horizontal);
         assert!(actual.is_some());
-        assert_eq!(expected, actual.unwrap());
+        assert_eq!("hello", actual.unwrap());
     }
 
     #[test]
     fn test_following_vertical() {
         let mut board = ScrabbleBoard::default();
-        let word = "hello";
-        let start = Position { row: 7, col: 7 };
-        board.add_word(word, start, Direction::Vertical);
+        let play = ScrabblePlay {
+            start: Position { row: 7, col: 7 },
+            direction: Direction::Vertical,
+            word: "hello".to_string(),
+        };
+        board.add_play(&play);
 
-        let expected = word;
         let position = Position { row: 6, col: 7 };
         let actual = board.following(position, Direction::Vertical);
         assert!(actual.is_some());
-        assert_eq!(expected, actual.unwrap());
+        assert_eq!("hello", actual.unwrap());
     }
 }

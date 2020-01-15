@@ -1,1 +1,8 @@
 max_width = 100
+reorder_imports = true
+reorder_modules = true
+
+# Unstable features
+#imports_layout = "HorizontalVertical"
+#merge_imports = true
+#reorder_impl_items = true

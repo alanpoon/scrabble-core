@@ -1,5 +1,5 @@
-use super::cross_checks::CrossChecks;
-use crate::scrabble::Direction;
+use crate::scrabble::cross_checks::CrossChecks;
+use crate::scrabble::util::Direction;
 
 #[derive(Debug, Clone)]
 pub struct CheckedBoardSquare {
@@ -11,14 +11,14 @@ pub struct CheckedBoardSquare {
 }
 
 impl CheckedBoardSquare {
-    pub fn to_checked_row_square(&self, direction: Direction) -> CheckedRowSquare {
+    pub fn to_checked_row_square(&self, direction: Direction) -> CheckedAisleSquare {
         let cross_checks = match direction {
             Direction::Horizontal => self.vertical_cross_checks.clone(),
             Direction::Vertical => self.horizontal_cross_checks.clone(),
         };
         let is_anchor =
             self.horizontal_cross_checks.is_some() || self.vertical_cross_checks.is_some();
-        CheckedRowSquare {
+        CheckedAisleSquare {
             tile: self.tile,
             cross_checks,
             is_anchor,
@@ -44,16 +44,25 @@ impl Default for CheckedBoardSquare {
 }
 
 #[derive(Debug, Clone)]
-pub struct CheckedRowSquare {
+pub struct CheckedAisleSquare {
     pub tile: Option<char>,
     pub cross_checks: Option<CrossChecks>,
     /// Need to explicitly track whether a square is an anchor since we only have one of the cross checks
     pub is_anchor: bool,
 }
 
-impl Default for CheckedRowSquare {
-    fn default() -> CheckedRowSquare {
-        CheckedRowSquare {
+impl CheckedAisleSquare {
+    pub fn is_compatible(&self, letter: char) -> bool {
+        self.cross_checks
+            .as_ref()
+            .and_then(|checks| Some(checks.allows(letter)))
+            .unwrap_or(true)
+    }
+}
+
+impl Default for CheckedAisleSquare {
+    fn default() -> CheckedAisleSquare {
+        CheckedAisleSquare {
             tile: None,
             cross_checks: None,
             is_anchor: false,

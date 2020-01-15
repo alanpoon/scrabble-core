@@ -141,8 +141,6 @@ impl From<u64> for DawgEdge {
 mod test {
     use crate::loading::load_dawg;
 
-    use super::*;
-
     #[test]
     fn test_load_dawg() {
         let dawg = load_dawg();

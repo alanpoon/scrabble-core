@@ -65,18 +65,34 @@ impl ScrabbleBoard {
         }
     }
 
+    pub fn contents(&self) -> String {
+        self.render(false, false)
+    }
+
     pub fn display(&self) -> String {
+        self.render(true, true)
+    }
+
+    fn render(&self, show_modifiers: bool, include_newlines: bool) -> String {
         let mut result = String::with_capacity(BOARD_SIZE * (BOARD_SIZE + 1));
         for (row, row_contents) in self.squares.iter().enumerate() {
             for (col, square) in row_contents.iter().enumerate() {
                 let position = Position { row, col };
                 let next_char = match &square {
                     Some(ch) => *ch,
-                    None => ScoreModifier::at(position).as_char(),
+                    None => {
+                        if show_modifiers {
+                            ScoreModifier::at(position).as_char()
+                        } else {
+                            EMPTY_SQUARE_CHAR
+                        }
+                    }
                 };
                 result.push(next_char);
             }
-            result.push('\n');
+            if include_newlines {
+                result.push('\n');
+            }
         }
         result
     }

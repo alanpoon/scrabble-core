@@ -2,12 +2,12 @@ use std::collections::VecDeque;
 use std::ops::{Index, IndexMut};
 
 use crate::data_structures::Dawg;
-use crate::scrabble::checked_square::{CheckedAisleSquare, CheckedBoardSquare};
-use crate::scrabble::cross_checks::CrossChecks;
-use crate::scrabble::play_generation::ScrabblePlay;
-use crate::scrabble::scoring::ScoreModifier;
-use crate::scrabble::util::{Direction, Position};
-use crate::scrabble::util::{BLANK_TILE_CHAR, EMPTY_SQUARE_CHAR};
+use crate::game::checked_square::{CheckedAisleSquare, CheckedBoardSquare};
+use crate::game::cross_checks::CrossChecks;
+use crate::game::play_generation::ScrabblePlay;
+use crate::game::scoring::ScoreModifier;
+use crate::game::util::{Direction, Position};
+use crate::game::util::{BLANK_TILE_CHAR, EMPTY_SQUARE_CHAR};
 
 pub const BOARD_SIZE: usize = 15;
 

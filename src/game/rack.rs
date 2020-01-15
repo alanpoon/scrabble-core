@@ -1,4 +1,5 @@
-use crate::scrabble::util::BLANK_TILE_CHAR;
+use crate::game::util::BLANK_TILE_CHAR;
+use crate::loading::A_INDEX;
 
 const N_LETTERS: usize = 26;
 const N_TILES: usize = N_LETTERS + 1;
@@ -37,7 +38,6 @@ impl ScrabbleRack {
     }
 
     fn tile_index(tile: char) -> usize {
-        const A_INDEX: u8 = 97;
         (match tile {
             tile if tile.is_ascii_lowercase() => tile as u8 - A_INDEX,
             BLANK_TILE_CHAR => BLANK_TILE_INDEX as u8,

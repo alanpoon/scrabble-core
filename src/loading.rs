@@ -1,10 +1,13 @@
-use std::fs;
-
 use crate::data_structures::{Dawg, DawgEdge};
 use std::mem::size_of;
 
+pub const A_INDEX: u8 = 97;
+
+static DAWG_BYTES: &'static [u8] = include_bytes!("../assets/dawg.bin");
+
 pub fn load_dawg() -> Dawg {
-    let bytes = fs::read("assets/dawg.bin").expect("Couldn't load asserts/dawg.bin");
+    // let bytes = fs::read("assets/dawg.bin").expect("Couldn't load asserts/dawg.bin");
+    let bytes = DAWG_BYTES;
     let mut edges: Vec<DawgEdge> = Vec::new();
     let u64_size = size_of::<u64>();
     for i in 0..bytes.len() / u64_size {

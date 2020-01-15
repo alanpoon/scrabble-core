@@ -1,5 +1,5 @@
-use crate::scrabble::cross_checks::CrossChecks;
-use crate::scrabble::util::Direction;
+use crate::game::cross_checks::CrossChecks;
+use crate::game::util::Direction;
 
 #[derive(Debug, Clone)]
 pub struct CheckedBoardSquare {

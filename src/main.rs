@@ -1,5 +1,6 @@
-use scrabble::{board_from_plays, generate_plays, load_dawg, Direction, Position, ScrabblePlay};
 use std::time::Instant;
+
+use scrabble::{board_from_plays, generate_plays, load_dawg, Direction, Position, ScrabblePlay};
 
 fn main() {
     let start = Instant::now();

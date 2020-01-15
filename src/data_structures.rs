@@ -11,6 +11,7 @@ impl DawgNodeIndex {
     }
 }
 
+#[derive(Debug)]
 pub struct Dawg {
     pub edges: Vec<DawgEdge>,
 }

@@ -1,7 +1,7 @@
 use crate::data_structures::{Dawg, DawgEdge, DawgNodeIndex};
-use crate::scrabble::scoring::score_play;
-use crate::scrabble::util::{Direction, Position};
-use crate::scrabble::{CheckedAisleSquare, CheckedScrabbleBoard, ScrabbleRack, BOARD_SIZE};
+use crate::game::scoring::score_play;
+use crate::game::util::{Direction, Position};
+use crate::game::{CheckedAisleSquare, CheckedScrabbleBoard, ScrabbleRack, BOARD_SIZE};
 
 #[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
 pub struct ScoredScrabblePlay {

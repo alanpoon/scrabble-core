@@ -1,13 +1,13 @@
 use crate::data_structures::Dawg;
+pub use crate::game::play_generation::ScrabblePlay;
+use crate::game::play_generation::{PlayGenerator, ScoredScrabblePlay};
+pub use crate::game::util::{Direction, Position};
+use crate::game::{ScrabbleBoard, ScrabbleRack};
 pub use crate::loading::load_dawg;
-pub use crate::scrabble::play_generation::ScrabblePlay;
-use crate::scrabble::play_generation::{PlayGenerator, ScoredScrabblePlay};
-pub use crate::scrabble::util::{Direction, Position};
-use crate::scrabble::{ScrabbleBoard, ScrabbleRack};
 
 mod data_structures;
+mod game;
 mod loading;
-mod scrabble;
 
 pub fn board_from_contents(contents: &str) -> ScrabbleBoard {
     ScrabbleBoard::from_contents(&contents).expect("Invalid input")

@@ -1,5 +1,5 @@
-use crate::scrabble::play_generation::GenerationAisle;
-use crate::scrabble::util::{Position, BLANK_TILE_CHAR, EMPTY_SQUARE_CHAR};
+use crate::game::play_generation::GenerationAisle;
+use crate::game::util::{Position, BLANK_TILE_CHAR, EMPTY_SQUARE_CHAR};
 
 pub fn score_play(aisle: &GenerationAisle, start_word_index: usize, word: &str) -> i32 {
     let mut position = aisle.position(start_word_index);

@@ -1,6 +1,8 @@
-use crate::data_structures::{Dawg, DAWG_EDGE_TO_ROOT};
-use crate::scrabble::scoring::letter_value;
 use std::fmt;
+
+use crate::data_structures::{Dawg, DAWG_EDGE_TO_ROOT};
+use crate::game::scoring::letter_value;
+use crate::loading::A_INDEX;
 
 #[derive(Clone)]
 pub struct CrossChecks {
@@ -59,8 +61,6 @@ impl CrossChecks {
     }
 
     fn letters(&self) -> String {
-        const A_INDEX: u8 = 97;
-
         let mut letters = String::new();
         for char_index in 0..27 {
             if self.allowed & (1 << char_index) != 0 {
@@ -92,8 +92,9 @@ impl fmt::Display for CrossChecks {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::loading::load_dawg;
+
+    use super::*;
 
     #[test]
     fn test_cross_checks() {

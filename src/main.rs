@@ -1,10 +1,11 @@
 use std::time::Instant;
 
-use scrabble::{board_from_plays, generate_plays, load_dawg, Direction, Position, ScrabblePlay};
+use scrabble::load_dawg;
+use scrabble::{board_from_plays, generate_plays, Direction, Position, ScrabblePlay};
 
 fn main() {
     let start = Instant::now();
-    let dawg = load_dawg();
+    load_dawg();
     let duration = start.elapsed();
     println!("Time elapsed in load_dawg() is: {:?}", duration);
 
@@ -17,7 +18,7 @@ fn main() {
     println!("{}", board.display());
 
     let start = Instant::now();
-    let plays = generate_plays(&dawg, "abcdefg", &board, 20);
+    let plays = generate_plays("abcdefg", &board, 20);
     let duration = start.elapsed();
     for play in plays.iter() {
         println!("{:?}", play);

@@ -1,8 +1,11 @@
-use crate::data_structures::Dawg;
+#[macro_use]
+extern crate lazy_static;
+
+pub use crate::data_structures::Dawg;
 pub use crate::game::play_generation::ScrabblePlay;
-use crate::game::play_generation::{PlayGenerator, ScoredScrabblePlay};
+pub use crate::game::play_generation::{PlayGenerator, ScoredScrabblePlay};
 pub use crate::game::util::{Direction, Position};
-use crate::game::{ScrabbleBoard, ScrabbleRack};
+pub use crate::game::{ScrabbleBoard, ScrabbleRack};
 pub use crate::loading::load_dawg;
 
 mod data_structures;
@@ -22,13 +25,13 @@ pub fn board_from_plays(plays: &Vec<ScrabblePlay>) -> ScrabbleBoard {
 }
 
 pub fn generate_plays(
-    dawg: &Dawg,
     rack_contents: &str,
     board: &ScrabbleBoard,
     max_n_plays: usize,
 ) -> Vec<ScoredScrabblePlay> {
+    let dawg = load_dawg();
     let rack = ScrabbleRack::new(rack_contents);
-    let checked_board = board.to_checked_board(&dawg);
+    let checked_board = board.to_checked_board(dawg);
     let generator = PlayGenerator {
         dawg,
         checked_board,
@@ -42,7 +45,7 @@ pub fn generate_plays(
 
 #[cfg(test)]
 mod test {
-    use crate::{load_dawg, Direction, Position, ScrabblePlay};
+    use crate::{Direction, Position, ScrabblePlay};
 
     use super::*;
 
@@ -65,9 +68,8 @@ mod test {
     }
 
     fn best_play_for_test_board(rack_contents: &str) -> ScoredScrabblePlay {
-        let dawg = load_dawg();
         let board = get_test_board();
-        best_play_for_board(&dawg, rack_contents, &board)
+        best_play_for_board(rack_contents, &board)
     }
 
     fn get_test_board() -> ScrabbleBoard {
@@ -79,13 +81,9 @@ mod test {
         board_from_plays(&existing_plays)
     }
 
-    fn best_play_for_board(
-        dawg: &Dawg,
-        rack_contents: &str,
-        board: &ScrabbleBoard,
-    ) -> ScoredScrabblePlay {
+    fn best_play_for_board(rack_contents: &str, board: &ScrabbleBoard) -> ScoredScrabblePlay {
         let max_n_plays = 5;
-        let plays = generate_plays(dawg, rack_contents, board, max_n_plays);
+        let plays = generate_plays(rack_contents, board, max_n_plays);
         dbg!(&plays);
         assert_eq!(plays.len(), max_n_plays);
         plays[0].clone()

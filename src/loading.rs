@@ -3,14 +3,27 @@ use std::mem::size_of;
 
 pub const A_INDEX: u8 = 97;
 
-static DAWG_BYTES: &'static [u8] = include_bytes!("../assets/dawg.bin");
+lazy_static! {
+    // Use &*DAWG to access a global instance of the dawg
+    // this makes it easier to hide this implementation detail in an externally-facing API
+    pub static ref DAWG: Dawg = parse_dawg();
+}
 
-pub fn load_dawg() -> Dawg {
-    // let bytes = fs::read("assets/dawg.bin").expect("Couldn't load asserts/dawg.bin");
+pub fn load_dawg() -> &'static Dawg {
+    &*DAWG
+}
+
+fn parse_dawg() -> Dawg {
+    // The following results in a smaller binary, but requires the file to be locally available
+    //use std::fs;
+    //let bytes = fs::read("assets/dawg.bin").expect("Couldn't load asserts/dawg.bin");
+    static DAWG_BYTES: &'static [u8] = include_bytes!("../assets/dawg.bin");
     let bytes = DAWG_BYTES;
-    let mut edges: Vec<DawgEdge> = Vec::new();
+
     let u64_size = size_of::<u64>();
-    for i in 0..bytes.len() / u64_size {
+    let n_dawg_edges = bytes.len() / u64_size;
+    let mut edges: Vec<DawgEdge> = Vec::with_capacity(n_dawg_edges);
+    for i in 0..n_dawg_edges {
         let mut num: u64 = 0;
         for j in 0..u64_size {
             let byte_index = u64_size * i + j;
@@ -28,7 +41,7 @@ mod test {
 
     #[test]
     fn test_load_dawg_data() {
-        let dawg_data = load_dawg().edges;
+        let dawg_data = &load_dawg().edges;
         assert_eq!(dawg_data.len(), 190446);
         assert_eq!(
             dawg_data[0],

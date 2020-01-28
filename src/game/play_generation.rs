@@ -121,24 +121,23 @@ impl<'a> GenerationAnchor<'a> {
     }
 
     fn left_part_start_index(&self) -> usize {
-        let left_part_start = {
-            let mut index: Option<usize> = None;
-            for possible_first in (0..self.anchor_index).rev() {
-                if self.aisle.squares[possible_first].tile.is_none() {
-                    index = Some(possible_first + 1);
-                    break;
-                }
+        for (possible_first, square) in self.aisle.squares[..self.anchor_index]
+            .iter()
+            .enumerate()
+            .rev()
+        {
+            if square.tile.is_none() {
+                return possible_first + 1;
             }
-            index.unwrap_or(0)
-        };
-        left_part_start
+        }
+        0
     }
 
     fn initial_left_part(&self, left_part_start_index: usize) -> (String, DawgNodeIndex) {
         let mut partial_word = String::with_capacity(BOARD_SIZE);
         let mut node = self.dawg.root();
-        for index in left_part_start_index..self.anchor_index {
-            let ch = self.aisle.squares[index].tile.unwrap();
+        for square in self.aisle.squares[left_part_start_index..self.anchor_index].iter() {
+            let ch = square.tile.unwrap();
             partial_word.push(ch);
             if node.is_some() {
                 node = self

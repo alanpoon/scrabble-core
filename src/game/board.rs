@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::ops::{Index, IndexMut};
 
-use crate::data_structures::Dawg;
+use crate::dawg::Dawg;
 use crate::game::checked_square::{CheckedAisleSquare, CheckedBoardSquare};
 use crate::game::cross_checks::CrossChecks;
 use crate::game::play_generation::ScrabblePlay;

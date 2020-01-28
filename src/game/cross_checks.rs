@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::data_structures::{Dawg, DAWG_EDGE_TO_ROOT};
+use crate::dawg::{Dawg, DAWG_EDGE_TO_ROOT};
 use crate::game::scoring::letter_value;
 use crate::loading::A_INDEX;
 
@@ -38,7 +38,8 @@ impl CrossChecks {
             false => dawg.walk_from_node(dawg.root(), preceding),
         };
         if let Some(prior_edge) = maybe_prior_edge {
-            if let Some(checked_node) = prior_edge.target {
+            let checked_node = prior_edge.target;
+            if checked_node.is_some() {
                 dawg.apply_to_child_edges(checked_node, |edge| {
                     if let Some(final_edge) = dawg.walk_from_prior_edge(edge, following) {
                         if final_edge.word_terminator {

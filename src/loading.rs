@@ -1,4 +1,4 @@
-use crate::data_structures::{Dawg, DawgEdge};
+use crate::dawg::{Dawg, DawgEdge};
 use std::mem::size_of;
 
 pub const A_INDEX: u8 = 97;
@@ -37,7 +37,7 @@ fn parse_dawg() -> Dawg {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::data_structures::DawgNodeIndex;
+    use crate::dawg::DawgNodeIndex;
 
     #[test]
     fn test_load_dawg_data() {
@@ -48,7 +48,7 @@ mod test {
             DawgEdge {
                 letter: 'a',
                 word_terminator: false,
-                target: Some(DawgNodeIndex(26)),
+                target: DawgNodeIndex(26),
                 node_terminator: false,
             }
         );
@@ -57,9 +57,24 @@ mod test {
             DawgEdge {
                 letter: 'l',
                 word_terminator: false,
-                target: Some(DawgNodeIndex(136)),
+                target: DawgNodeIndex(136),
                 node_terminator: false,
             }
         );
+    }
+}
+
+#[cfg(all(test, feature = "unstable"))]
+mod benches {
+    extern crate test;
+
+    use super::*;
+
+    #[bench]
+    pub fn bench_parse_dawg(b: &mut test::Bencher) {
+        let mut dawg: Option<Dawg> = None;
+        b.iter(|| dawg = Some(parse_dawg()));
+        // Actually the dawg to ensure the loading doesn't get compiled out; maybe this is unnecessary
+        assert!(dawg.unwrap().contains("hello"))
     }
 }

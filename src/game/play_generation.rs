@@ -1,4 +1,4 @@
-use crate::data_structures::{Dawg, DawgEdge, DawgNodeIndex};
+use crate::dawg::{Dawg, DawgEdge, DawgNodeIndex};
 use crate::game::scoring::score_play;
 use crate::game::util::{Direction, Position};
 use crate::game::{CheckedAisleSquare, CheckedScrabbleBoard, ScrabbleRack, BOARD_SIZE};
@@ -108,13 +108,13 @@ impl<'a> GenerationAnchor<'a> {
     fn initial_state(&self, rack: &ScrabbleRack) -> Result<(GenerationState, DawgNodeIndex), ()> {
         let left_part_start_index = self.left_part_start_index();
         let (partial_word, maybe_node) = self.initial_left_part(left_part_start_index);
-        if let Some(node) = maybe_node {
+        if maybe_node.is_some() {
             let play_generation_state = GenerationState {
                 plays: Vec::new(),
                 rack: rack.clone(),
                 partial_word,
             };
-            Ok((play_generation_state, node))
+            Ok((play_generation_state, maybe_node))
         } else {
             Err(()) // No words can be built starting with the initial left part
         }
@@ -134,13 +134,19 @@ impl<'a> GenerationAnchor<'a> {
         left_part_start
     }
 
-    fn initial_left_part(&self, left_part_start_index: usize) -> (String, Option<DawgNodeIndex>) {
+    fn initial_left_part(&self, left_part_start_index: usize) -> (String, DawgNodeIndex) {
         let mut partial_word = String::with_capacity(BOARD_SIZE);
-        let mut node = Some(self.dawg.root());
+        let mut node = self.dawg.root();
         for index in left_part_start_index..self.anchor_index {
             let ch = self.aisle.squares[index].tile.unwrap();
             partial_word.push(ch);
-            node = node.and_then(|i| self.dawg.leaving_edge(i, ch).and_then(|edge| edge.target))
+            if node.is_some() {
+                node = self
+                    .dawg
+                    .leaving_edge(node, ch)
+                    .map(|edge| edge.target)
+                    .unwrap_or(DawgNodeIndex(0));
+            }
         }
         (partial_word, node)
     }
@@ -159,7 +165,8 @@ impl<'a> GenerationAnchor<'a> {
         self.extend_right(state, node, self.anchor_index);
         if limit > 0 {
             self.dawg.apply_to_child_edges(node, |edge| {
-                if let Some(target) = edge.target {
+                let target = edge.target;
+                if target.is_some() {
                     if let Ok(tile) = state.rack.take_tile(edge.letter) {
                         state.partial_word.push(edge.letter);
                         self.add_plays_for_left(state, target, limit - 1);
@@ -205,7 +212,8 @@ impl<'a> GenerationAnchor<'a> {
     ) {
         state.partial_word.push(edge.letter);
         self.check_add_play(state, edge, placement_index + 1);
-        if let Some(target) = edge.target {
+        let target = edge.target;
+        if target.is_some() {
             self.extend_right(state, target, placement_index + 1);
         }
         state.partial_word.pop();

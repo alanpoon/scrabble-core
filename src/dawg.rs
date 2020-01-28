@@ -1,13 +1,18 @@
-use std::ops::Index;
+use std::ops::{Index, RangeFrom};
 
 /// Note: A DawgNode is really just the first DawgEdge in a block associated with a specific node
 /// So A DawgNodeIndex is actually a pointer to a DawgEdge
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
-pub struct DawgNodeIndex(pub usize);
+pub struct DawgNodeIndex(pub u32);
+const NULL_DAWG_NODE_INDEX: u32 = std::u32::MAX;
 
 impl DawgNodeIndex {
-    fn next(&self) -> DawgNodeIndex {
-        DawgNodeIndex(self.0 + 1)
+    pub fn is_null(&self) -> bool {
+        self.0 == NULL_DAWG_NODE_INDEX
+    }
+
+    pub fn is_some(&self) -> bool {
+        self.0 != NULL_DAWG_NODE_INDEX
     }
 }
 
@@ -22,11 +27,11 @@ impl Dawg {
     }
 
     pub fn walk_from_node(&self, start: DawgNodeIndex, letters: &str) -> Option<&DawgEdge> {
-        let mut maybe_node = Some(start);
+        let mut maybe_node = start;
         let mut maybe_edge = None;
         for ch in letters.chars() {
-            if let Some(node) = maybe_node {
-                maybe_edge = self.leaving_edge(node, ch);
+            if maybe_node.is_some() {
+                maybe_edge = self.leaving_edge(maybe_node, ch);
                 if let Some(edge) = maybe_edge {
                     maybe_node = edge.target;
                     continue;
@@ -45,9 +50,11 @@ impl Dawg {
         if letters.is_empty() {
             return Some(prior_edge);
         }
-        prior_edge
-            .target
-            .and_then(|x| self.walk_from_node(x, letters))
+        if prior_edge.target.is_some() {
+            self.walk_from_node(prior_edge.target, letters)
+        } else {
+            None
+        }
     }
 
     pub fn contains(&self, word: &str) -> bool {
@@ -55,41 +62,35 @@ impl Dawg {
     }
 
     pub fn leaving_edge(&self, node: DawgNodeIndex, ch: char) -> Option<&DawgEdge> {
-        let mut node = node;
-        loop {
-            let edge = &self[node];
+        for edge in &self[node..] {
             if edge.letter == ch {
-                break Some(edge);
+                return Some(edge);
             }
             if edge.node_terminator {
-                break None;
+                break;
             }
-            node = node.next();
         }
+        None
     }
 
     pub fn apply_to_child_edges<F>(&self, node: DawgNodeIndex, mut f: F)
     where
         F: FnMut(&DawgEdge),
     {
-        let mut node_index = node;
-
-        loop {
-            let edge = &self[node_index];
+        for edge in self[node..].iter() {
             f(edge);
             if edge.node_terminator {
                 break;
             }
-            node_index = node_index.next();
         }
     }
 }
 
-impl Index<DawgNodeIndex> for Dawg {
-    type Output = DawgEdge;
+impl Index<RangeFrom<DawgNodeIndex>> for Dawg {
+    type Output = [DawgEdge];
 
-    fn index(&self, index: DawgNodeIndex) -> &Self::Output {
-        &self.edges[index.0]
+    fn index(&self, index: RangeFrom<DawgNodeIndex>) -> &Self::Output {
+        &self.edges[index.start.0 as usize..]
     }
 }
 
@@ -102,14 +103,14 @@ pub struct DawgEdge {
     // 1 bit in paper
     pub node_terminator: bool,
     // 16 bits in paper
-    pub target: Option<DawgNodeIndex>,
+    pub target: DawgNodeIndex,
 }
 
 pub const DAWG_EDGE_TO_ROOT: &'static DawgEdge = &DawgEdge {
     letter: 'a',
     word_terminator: false,
     node_terminator: false,
-    target: Some(DawgNodeIndex(0)),
+    target: DawgNodeIndex(0),
 };
 
 impl From<u64> for DawgEdge {
@@ -125,8 +126,8 @@ impl From<u64> for DawgEdge {
         let word_terminator = (input >> WORD_TERMINATOR_BIT_OFFSET) as u8 != 0;
         let node_terminator = (input >> NODE_TERMINATOR_BIT_OFFSET) as u8 != 0;
         let target = match (input >> TARGET_BIT_OFFSET) as u32 {
-            MISSING_TARGET_FLAG => None,
-            other => Some(DawgNodeIndex(other as usize)),
+            MISSING_TARGET_FLAG => DawgNodeIndex(NULL_DAWG_NODE_INDEX),
+            other => DawgNodeIndex(other),
         };
 
         Self {

@@ -1,14 +1,15 @@
+#![cfg_attr(all(test, feature = "unstable"), feature(test))]
 #[macro_use]
 extern crate lazy_static;
 
-pub use crate::data_structures::Dawg;
-pub use crate::game::play_generation::ScrabblePlay;
-pub use crate::game::play_generation::{PlayGenerator, ScoredScrabblePlay};
-pub use crate::game::util::{Direction, Position};
-pub use crate::game::{ScrabbleBoard, ScrabbleRack};
+pub use crate::dawg::Dawg;
+pub use crate::game::{
+    Direction, PlayGenerator, Position, ScoredScrabblePlay, ScrabbleBoard, ScrabblePlay,
+    ScrabbleRack,
+};
 pub use crate::loading::load_dawg;
 
-mod data_structures;
+mod dawg;
 mod game;
 mod loading;
 
@@ -50,7 +51,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_play_gen_1() {
+    pub fn test_play_gen_1() {
         let best_play = best_play_for_test_board("abcdefg");
         assert_eq!(best_play.play.start, Position { row: 6, col: 6 });
         assert_eq!(best_play.play.direction, Direction::Horizontal);
@@ -59,7 +60,7 @@ mod test {
     }
 
     #[test]
-    fn test_play_gen_2() {
+    pub fn test_play_gen_2() {
         let best_play = best_play_for_test_board("abcde__");
         assert_eq!(best_play.play.start, Position { row: 3, col: 10 });
         assert_eq!(best_play.play.direction, Direction::Vertical);
@@ -87,5 +88,26 @@ mod test {
         dbg!(&plays);
         assert_eq!(plays.len(), max_n_plays);
         plays[0].clone()
+    }
+}
+
+#[cfg(all(test, feature = "unstable"))]
+mod benches {
+    extern crate test;
+
+    use crate::load_dawg;
+
+    use super::test::*;
+
+    #[bench]
+    pub fn bench_play_gen_1(b: &mut test::Bencher) {
+        load_dawg();
+        b.iter(|| test_play_gen_1());
+    }
+
+    #[bench]
+    pub fn bench_play_gen_2(b: &mut test::Bencher) {
+        load_dawg();
+        b.iter(|| test_play_gen_2());
     }
 }

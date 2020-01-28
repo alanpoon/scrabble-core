@@ -11,3 +11,9 @@ lazy_static = "1.4.0"
 
 [profile.release]
 #lto = true
+
+[profile.bench]
+lto = true
+
+[features]
+unstable = []

@@ -26,24 +26,26 @@ impl<'a> PlayGenerator<'a> {
     pub fn plays(&self) -> Vec<ScoredScrabblePlay> {
         let mut plays: Vec<ScoredScrabblePlay> = Vec::new();
         for aisle in self.generation_aisles().iter() {
+            println!("generation_aisles().iter()");
             for (anchor_index, tile) in aisle.squares.iter().enumerate() {
-                if tile.is_anchor {
+             //   if tile.is_anchor {
                     let solving_anchor = GenerationAnchor {
                         dawg: &self.dawg,
                         aisle,
                         anchor_index,
                     };
                     plays.extend(solving_anchor.scored_plays(&self.rack));
-                }
+             //   }
             }
         }
+        println!("player {:?}",plays.len());
         plays
     }
 
     fn generation_aisles(&self) -> Vec<GenerationAisle> {
         let board = &self.checked_board;
-        let mut solving_rows: Vec<GenerationAisle> = Vec::with_capacity(2 * BOARD_SIZE);
-        for index in 0..BOARD_SIZE {
+        let mut solving_rows: Vec<GenerationAisle> = Vec::with_capacity(2 * 1);
+        for index in 0..1 {
             for &direction in Direction::iterator() {
                 let solving_row = GenerationAisle {
                     direction,

@@ -9,11 +9,11 @@ use crate::game::scoring::ScoreModifier;
 use crate::game::util::{Direction, Position};
 use crate::game::util::{BLANK_TILE_CHAR, EMPTY_SQUARE_CHAR};
 
-pub const BOARD_SIZE: usize = 15;
+pub const BOARD_SIZE: usize = 10;
 
 #[derive(Debug, Clone)]
 pub struct ScrabbleBoard {
-    pub squares: [[Option<char>; BOARD_SIZE]; BOARD_SIZE],
+    pub squares: [[Option<char>; BOARD_SIZE]; 1],
 }
 
 impl ScrabbleBoard {
@@ -23,7 +23,7 @@ impl ScrabbleBoard {
         let mut board = ScrabbleBoard::default();
         for (i, ch) in parsed_contents.iter().enumerate() {
             let row = i / BOARD_SIZE;
-            let col = i % BOARD_SIZE;
+            let col = 1;
             *&mut board.squares[row][col] = *ch;
         }
         Ok(board)
@@ -31,7 +31,7 @@ impl ScrabbleBoard {
 
     fn parse_contents(contents: &str) -> Result<Vec<Option<char>>, ()> {
         let tiles = ScrabbleBoard::parse_into_tiles(contents)?;
-        if tiles.len() != BOARD_SIZE * BOARD_SIZE {
+        if tiles.len() != BOARD_SIZE {
             Err(())
         } else {
             Ok(tiles)
@@ -39,7 +39,7 @@ impl ScrabbleBoard {
     }
 
     fn parse_into_tiles(contents: &str) -> Result<Vec<Option<char>>, ()> {
-        let mut result: Vec<_> = Vec::with_capacity(BOARD_SIZE * BOARD_SIZE);
+        let mut result: Vec<_> = Vec::with_capacity(BOARD_SIZE);
         for ch in contents.chars() {
             if ch == '\n' {
                 continue; // ignore newlines
@@ -59,9 +59,13 @@ impl ScrabbleBoard {
 
     pub fn add_play(&mut self, play: &ScrabblePlay) {
         let mut position = play.start;
+        println!("vbn");
         for ch in play.word.chars() {
+            println!("bbn");
             self[position] = Some(ch);
+            println!("1bbn");
             position = position.step(play.direction);
+            println!("2bbn");
         }
     }
 
@@ -100,7 +104,7 @@ impl ScrabbleBoard {
     pub fn to_checked_board(&self, dawg: &Dawg) -> CheckedScrabbleBoard {
         let mut checked_board = CheckedScrabbleBoard::default();
         for &direction in Direction::iterator() {
-            for row in 0..BOARD_SIZE {
+            for row in 0..1 {
                 for col in 0..BOARD_SIZE {
                     let position = Position { row, col };
                     let square = &mut checked_board[position];
@@ -113,8 +117,8 @@ impl ScrabbleBoard {
                         if preceding.is_some() || following.is_some() {
                             let preceding = CrossChecks::unwrap_or_empty(preceding.as_ref());
                             let following = CrossChecks::unwrap_or_empty(following.as_ref());
-                            *square.checks_mut(direction) =
-                                Some(CrossChecks::create(dawg, preceding, following));
+                         //   *square.checks_mut(direction) =
+                         //       Some(CrossChecks::create(dawg, preceding, following));
                         }
                     }
                 }
@@ -169,12 +173,14 @@ impl ScrabbleBoard {
 impl Index<Position> for ScrabbleBoard {
     type Output = Option<char>;
     fn index(&self, position: Position) -> &Self::Output {
+        println!("position {:?}",position);
         &self.squares[position.row][position.col]
     }
 }
 
 impl IndexMut<Position> for ScrabbleBoard {
     fn index_mut(&mut self, position: Position) -> &mut Self::Output {
+        println!("position {:?}",position);
         &mut self.squares[position.row][position.col]
     }
 }
@@ -182,14 +188,14 @@ impl IndexMut<Position> for ScrabbleBoard {
 impl Default for ScrabbleBoard {
     fn default() -> ScrabbleBoard {
         ScrabbleBoard {
-            squares: [[None; BOARD_SIZE]; BOARD_SIZE],
+            squares: [[None; BOARD_SIZE]; 1],
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct CheckedScrabbleBoard {
-    pub squares: [[CheckedBoardSquare; BOARD_SIZE]; BOARD_SIZE],
+    pub squares: [[CheckedBoardSquare; BOARD_SIZE]; 1],
 }
 
 impl CheckedScrabbleBoard {
@@ -213,13 +219,14 @@ impl Index<Position> for CheckedScrabbleBoard {
 
 impl IndexMut<Position> for CheckedScrabbleBoard {
     fn index_mut(&mut self, position: Position) -> &mut Self::Output {
+        println!("positionm{:?}",position);
         &mut self.squares[position.row][position.col]
     }
 }
 
 impl Default for CheckedScrabbleBoard {
     fn default() -> CheckedScrabbleBoard {
-        let squares: [[CheckedBoardSquare; BOARD_SIZE]; BOARD_SIZE] = Default::default();
+        let squares: [[CheckedBoardSquare; BOARD_SIZE]; 1] = Default::default();
         CheckedScrabbleBoard { squares }
     }
 }

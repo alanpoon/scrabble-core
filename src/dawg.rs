@@ -154,4 +154,10 @@ mod test {
         let root_children: String = root_children.iter().collect();
         assert_eq!(root_children, "abcdefghijklmnopqrstuvwxyz")
     }
+    #[test]
+    fn test_load_dawg2() {
+        let dawg = load_dawg();
+        let k = dawg.walk_from_node(dawg.root(),"pplea");
+        println!("zz {:?}",k);
+    }
 }

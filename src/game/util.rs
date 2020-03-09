@@ -11,7 +11,7 @@ pub enum Direction {
 
 impl Direction {
     pub fn iterator() -> Iter<'static, Direction> {
-        static DIRECTIONS: [Direction; 2] = [Direction::Horizontal, Direction::Vertical];
+        static DIRECTIONS: [Direction; 1] = [Direction::Horizontal];
         DIRECTIONS.iter()
     }
 }
@@ -24,42 +24,24 @@ pub struct Position {
 
 impl Position {
     pub fn from_aisle_cross(direction: Direction, aisle: usize, cross: usize) -> Position {
-        match direction {
-            Direction::Horizontal => Position {
-                row: aisle,
-                col: cross,
-            },
-            Direction::Vertical => Position {
-                row: cross,
-                col: aisle,
-            },
+        Position {
+            row: aisle,
+            col: cross,
         }
     }
 
     pub fn cross(&self, direction: Direction) -> usize {
-        match direction {
-            Direction::Horizontal => self.col,
-            Direction::Vertical => self.row,
-        }
+        self.col
     }
 
     pub fn set_cross(&mut self, direction: Direction, value: usize) {
-        match direction {
-            Direction::Horizontal => self.col = value,
-            Direction::Vertical => self.row = value,
-        }
+        self.col = value
     }
 
     pub fn step(&self, direction: Direction) -> Position {
-        match direction {
-            Direction::Horizontal => Position {
-                col: self.col + 1,
-                ..*self
-            },
-            Direction::Vertical => Position {
-                row: self.row + 1,
-                ..*self
-            },
+        Position {
+            col: self.col + 1,
+            ..*self
         }
     }
 }

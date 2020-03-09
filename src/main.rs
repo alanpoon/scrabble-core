@@ -9,19 +9,15 @@ fn main() {
     let duration = start.elapsed();
     println!("Time elapsed in load_dawg() is: {:?}", duration);
 
-    let existing_plays: Vec<ScrabblePlay> = vec![ScrabblePlay {
-        start: Position { row: 7, col: 7 },
-        direction: Direction::Horizontal,
-        word: "hello".to_string(),
-    }];
+    let existing_plays: Vec<ScrabblePlay> = vec![];
     let board = board_from_plays(&existing_plays);
     println!("{}", board.display());
 
     let start = Instant::now();
-    let plays = generate_plays("abcdefg", &board, 20);
+    let plays = generate_plays("abcdefg", &board, 1);
     let duration = start.elapsed();
     for play in plays.iter() {
-        println!("{:?}", play);
+        println!("play {:?}", play);
     }
     println!("Time elapsed in generate_plays() is: {:?}", duration);
 }

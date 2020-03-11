@@ -1,7 +1,8 @@
 use crate::dawg::{Dawg, DawgEdge, DawgNodeIndex};
 use crate::game::scoring::score_play;
 use crate::game::util::{Direction, Position};
-use crate::game::{CheckedAisleSquare, CheckedScrabbleBoard, ScrabbleRack, BOARD_SIZE};
+use crate::game::{CheckedAisleSquare, CheckedScrabbleBoard, BOARD_SIZE};
+use hardback_codec::cards::{self,WaitForInputType,Board};
 
 #[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
 pub struct ScoredScrabblePlay {
@@ -19,22 +20,23 @@ pub struct ScrabblePlay {
 pub struct PlayGenerator<'a> {
     pub dawg: &'a Dawg,
     pub checked_board: CheckedScrabbleBoard,
-    pub rack: ScrabbleRack,
+    pub rack: Vec<usize>,
 }
 
 impl<'a> PlayGenerator<'a> {
     pub fn plays(&self) -> Vec<ScoredScrabblePlay> {
         let mut plays: Vec<ScoredScrabblePlay> = Vec::new();
         for aisle in self.generation_aisles().iter() {
-            println!("generation_aisles().iter()");
+            
             for (anchor_index, tile) in aisle.squares.iter().enumerate() {
              //   if tile.is_anchor {
+                println!("generation_aisles().tile() {:?}",tile);
                     let solving_anchor = GenerationAnchor {
                         dawg: &self.dawg,
                         aisle,
                         anchor_index,
                     };
-                    plays.extend(solving_anchor.scored_plays(&self.rack));
+                plays.extend(solving_anchor.scored_plays(&self.rack));
              //   }
             }
         }
@@ -82,11 +84,51 @@ impl GenerationAisle {
         Position::from_aisle_cross(self.direction, self.index, cross)
     }
 }
+pub struct BoardStruct{
+}
+impl Board for BoardStruct{
+    fn two_cent_per_adv(&mut self,
+        player_id: usize,
+        card_index: usize,
+        wait_for_input: &mut [WaitForInputType; 4]){
 
+        }
+    fn minus_other_ink(&mut self,
+        player_id: usize,
+        card_index: usize,
+        wait_for_input: &mut [WaitForInputType; 4]){
+            
+        }
+    fn lockup_offer(&mut self,
+        player_id: usize,
+        card_index: usize,
+        wait_for_input: &mut [WaitForInputType; 4]){}
+    fn uncover_adjacent(&mut self,
+                    player_id: usize,
+                    card_index: usize,
+                    wait_for_input: &mut [WaitForInputType; 4]){}
+    fn double_adjacent(&mut self,
+                player_id: usize,
+                card_index: usize,
+                wait_for_input: &mut [WaitForInputType; 4]){}
+    fn trash_other(&mut self,
+            player_id: usize,
+            card_index: usize,
+            wait_for_input: &mut [WaitForInputType; 4]){}
+    fn one_vp_per_wild(&mut self,
+                player_id: usize,
+                card_index: usize,
+                wait_for_input: &mut [WaitForInputType; 4]){}
+    fn putback_or_discard_three(&mut self,
+                            player_id: usize,
+                            card_index: usize,
+                            wait_for_input: &mut [WaitForInputType; 4]){}
+}
 struct GenerationState {
     plays: Vec<ScoredScrabblePlay>,
-    rack: ScrabbleRack,
+    rack: Vec<usize>,
     partial_word: String,
+    cardmeta:[cards::ListCard<BoardStruct>; 180]
 }
 
 struct GenerationAnchor<'a> {
@@ -96,7 +138,7 @@ struct GenerationAnchor<'a> {
 }
 
 impl<'a> GenerationAnchor<'a> {
-    pub fn scored_plays(&self, rack: &ScrabbleRack) -> Vec<ScoredScrabblePlay> {
+    pub fn scored_plays(&self, rack: &Vec<usize>) -> Vec<ScoredScrabblePlay> {
         let initial_state = self.initial_state(rack);
         if let Ok((mut state, node)) = initial_state {
             let initial_limit = self.initial_limit();
@@ -107,14 +149,16 @@ impl<'a> GenerationAnchor<'a> {
         }
     }
 
-    fn initial_state(&self, rack: &ScrabbleRack) -> Result<(GenerationState, DawgNodeIndex), ()> {
+    fn initial_state(&self, rack: &Vec<usize>) -> Result<(GenerationState, DawgNodeIndex), ()> {
         let left_part_start_index = self.left_part_start_index();
         let (partial_word, maybe_node) = self.initial_left_part(left_part_start_index);
+        
         if maybe_node.is_some() {
             let play_generation_state = GenerationState {
                 plays: Vec::new(),
                 rack: rack.clone(),
                 partial_word,
+                cardmeta: cards::populate::<BoardStruct>()
             };
             Ok((play_generation_state, maybe_node))
         } else {
@@ -167,12 +211,18 @@ impl<'a> GenerationAnchor<'a> {
         if limit > 0 {
             self.dawg.apply_to_child_edges(node, |edge| {
                 let target = edge.target;
+                println!("target {:?}",edge.letter);
                 if target.is_some() {
-                    if let Ok(tile) = state.rack.take_tile(edge.letter) {
-                        state.partial_word.push(edge.letter);
-                        self.add_plays_for_left(state, target, limit - 1);
-                        state.partial_word.pop();
-                        state.rack.add_tile(tile);
+                    for (i,card_index) in state.rack.clone().iter().enumerate(){
+                        let card_letter_vec:Vec<char> = state.cardmeta[*card_index].letter.chars().collect();
+                        if card_letter_vec[0]==edge.letter{
+                            state.rack.remove(i);
+                            state.partial_word.push(edge.letter);
+                            self.add_plays_for_left(state,target,limit -1);
+                            state.partial_word.pop();
+                            state.rack.push(*card_index);
+                            break;
+                        }
                     }
                 }
             });
@@ -195,11 +245,16 @@ impl<'a> GenerationAnchor<'a> {
             }
         } else {
             self.dawg.apply_to_child_edges(node, |edge| {
-                if let Ok(tile) = state.rack.take_tile(edge.letter) {
-                    if next_square.is_compatible(edge.letter) {
-                        self.extend_using_edge(state, next_tile_index, edge);
+                for (i,card_index) in state.rack.clone().iter().enumerate(){
+                    let card_letter_vec:Vec<char> = state.cardmeta[*card_index].letter.chars().collect();
+                    if card_letter_vec[0]==edge.letter{
+                        state.rack.remove(i);
+                        if next_square.is_compatible(edge.letter){
+                            self.extend_using_edge(state,next_tile_index,edge);
+                        }
+                        state.rack.push(*card_index);
+                        break;
                     }
-                    state.rack.add_tile(tile);
                 }
             })
         }

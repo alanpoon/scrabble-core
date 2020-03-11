@@ -4,8 +4,7 @@ extern crate lazy_static;
 
 pub use crate::dawg::Dawg;
 pub use crate::game::{
-    Direction, PlayGenerator, Position, ScoredScrabblePlay, ScrabbleBoard, ScrabblePlay,
-    ScrabbleRack,
+    Direction, PlayGenerator, Position, ScoredScrabblePlay, ScrabbleBoard, ScrabblePlay
 };
 pub use crate::loading::load_dawg;
 
@@ -26,17 +25,16 @@ pub fn board_from_plays(plays: &Vec<ScrabblePlay>) -> ScrabbleBoard {
 }
 
 pub fn generate_plays(
-    rack_contents: &str,
+    rack_contents: Vec<usize>,
     board: &ScrabbleBoard,
     max_n_plays: usize,
 ) -> Vec<ScoredScrabblePlay> {
     let dawg = load_dawg();
-    let rack = ScrabbleRack::new(rack_contents);
     let checked_board = board.to_checked_board(dawg);
     let generator = PlayGenerator {
         dawg,
         checked_board,
-        rack,
+        rack:rack_contents,
     };
     let mut plays = generator.plays();
     plays.sort_by_key(|x| -x.score);

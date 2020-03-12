@@ -36,8 +36,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "hardback_boardstruct"
+version = "0.1.0"
+dependencies = [
+ "hardback_codec 0.1.0 (git+https://github.com/alanpoon/hardback_codec.git)",
+]
+
+[[package]]
 name = "hardback_codec"
 version = "0.1.0"
+source = "git+https://github.com/alanpoon/hardback_codec.git#3f06260620db6226004f666b2fa49daf3c2070b0"
 dependencies = [
  "cardgame_macros 0.1.0 (git+https://github.com/alanpoon/cardgame_macros.git)",
  "chrono 0.4.6 (git+https://github.com/jjpe/chrono.git?branch=wasm)",
@@ -124,7 +132,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "scrabble"
 version = "0.1.0"
 dependencies = [
- "hardback_codec 0.1.0",
+ "hardback_boardstruct 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -242,6 +250,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum cardgame_macros 0.1.0 (git+https://github.com/alanpoon/cardgame_macros.git)" = "<none>"
 "checksum cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 "checksum chrono 0.4.6 (git+https://github.com/jjpe/chrono.git?branch=wasm)" = "<none>"
+"checksum hardback_codec 0.1.0 (git+https://github.com/alanpoon/hardback_codec.git)" = "<none>"
 "checksum itoa 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)" = "b8b7a7c0c47db5545ed3fef7468ee7bb5b74691498139e4b3f6a20685dc6dd8e"
 "checksum js-sys 0.3.36 (registry+https://github.com/rust-lang/crates.io-index)" = "1cb931d43e71f560c81badb0191596562bafad2be06a3f9025b845c847c60df5"
 "checksum lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"

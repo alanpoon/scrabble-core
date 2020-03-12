@@ -2,7 +2,7 @@ use crate::dawg::{Dawg, DawgEdge, DawgNodeIndex};
 use crate::game::scoring::score_play;
 use crate::game::util::{Direction, Position};
 use crate::game::{CheckedAisleSquare, CheckedScrabbleBoard, BOARD_SIZE};
-use hardback_codec::cards::{self,WaitForInputType,Board};
+use hardback_boardstruct::codec_lib::cards::{self,WaitForInputType,Board};
 
 #[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
 pub struct ScoredScrabblePlay {
@@ -15,6 +15,7 @@ pub struct ScrabblePlay {
     pub start: Position,
     pub direction: Direction,
     pub word: String,
+    pub arranged: Vec<(usize, bool, Option<String>, bool)>
 }
 
 pub struct PlayGenerator<'a> {
@@ -30,7 +31,6 @@ impl<'a> PlayGenerator<'a> {
             
             for (anchor_index, tile) in aisle.squares.iter().enumerate() {
              //   if tile.is_anchor {
-                println!("generation_aisles().tile() {:?}",tile);
                     let solving_anchor = GenerationAnchor {
                         dawg: &self.dawg,
                         aisle,
@@ -69,13 +69,14 @@ pub struct GenerationAisle {
 }
 
 impl GenerationAisle {
-    pub fn scored_play(&self, start_word_index: usize, word: String) -> ScoredScrabblePlay {
+    pub fn scored_play(&self, start_word_index: usize, word: String,arranged:Vec<(usize, bool, Option<String>, bool)>) -> ScoredScrabblePlay {
         let start = self.position(start_word_index);
         let score = score_play(&self, start_word_index, &word);
         let play = ScrabblePlay {
             start,
             direction: self.direction,
             word,
+            arranged
         };
         ScoredScrabblePlay { play, score }
     }
@@ -128,7 +129,8 @@ struct GenerationState {
     plays: Vec<ScoredScrabblePlay>,
     rack: Vec<usize>,
     partial_word: String,
-    cardmeta:[cards::ListCard<BoardStruct>; 180]
+    cardmeta:[cards::ListCard<BoardStruct>; 180],
+    partial_arranged: Vec<(usize, bool, Option<String>, bool)>
 }
 
 struct GenerationAnchor<'a> {
@@ -151,13 +153,14 @@ impl<'a> GenerationAnchor<'a> {
 
     fn initial_state(&self, rack: &Vec<usize>) -> Result<(GenerationState, DawgNodeIndex), ()> {
         let left_part_start_index = self.left_part_start_index();
-        let (partial_word, maybe_node) = self.initial_left_part(left_part_start_index);
+        let (partial_word, partial_arranged,maybe_node) = self.initial_left_part(left_part_start_index);
         
         if maybe_node.is_some() {
             let play_generation_state = GenerationState {
                 plays: Vec::new(),
                 rack: rack.clone(),
                 partial_word,
+                partial_arranged,
                 cardmeta: cards::populate::<BoardStruct>()
             };
             Ok((play_generation_state, maybe_node))
@@ -179,12 +182,14 @@ impl<'a> GenerationAnchor<'a> {
         0
     }
 
-    fn initial_left_part(&self, left_part_start_index: usize) -> (String, DawgNodeIndex) {
+    fn initial_left_part(&self, left_part_start_index: usize) -> (String, Vec<(usize,bool,Option<String>,bool)>,DawgNodeIndex) {
         let mut partial_word = String::with_capacity(BOARD_SIZE);
         let mut node = self.dawg.root();
+        let mut partial_arranged = Vec::new();
         for square in self.aisle.squares[left_part_start_index..self.anchor_index].iter() {
             let ch = square.tile.unwrap();
             partial_word.push(ch);
+            partial_arranged.push((1,false,None,false));
             if node.is_some() {
                 node = self
                     .dawg
@@ -193,7 +198,7 @@ impl<'a> GenerationAnchor<'a> {
                     .unwrap_or(DawgNodeIndex(0));
             }
         }
-        (partial_word, node)
+        (partial_word, partial_arranged, node)
     }
 
     fn initial_limit(&self) -> usize {
@@ -211,15 +216,16 @@ impl<'a> GenerationAnchor<'a> {
         if limit > 0 {
             self.dawg.apply_to_child_edges(node, |edge| {
                 let target = edge.target;
-                println!("target {:?}",edge.letter);
                 if target.is_some() {
                     for (i,card_index) in state.rack.clone().iter().enumerate(){
                         let card_letter_vec:Vec<char> = state.cardmeta[*card_index].letter.chars().collect();
                         if card_letter_vec[0]==edge.letter{
                             state.rack.remove(i);
                             state.partial_word.push(edge.letter);
+                            state.partial_arranged.push((*card_index,false,None,false));
                             self.add_plays_for_left(state,target,limit -1);
                             state.partial_word.pop();
+                            state.partial_arranged.pop();
                             state.rack.push(*card_index);
                             break;
                         }
@@ -250,7 +256,9 @@ impl<'a> GenerationAnchor<'a> {
                     if card_letter_vec[0]==edge.letter{
                         state.rack.remove(i);
                         if next_square.is_compatible(edge.letter){
+                            state.partial_arranged.push((*card_index,false,None,false));
                             self.extend_using_edge(state,next_tile_index,edge);
+                            state.partial_arranged.pop();
                         }
                         state.rack.push(*card_index);
                         break;
@@ -264,7 +272,7 @@ impl<'a> GenerationAnchor<'a> {
         &self,
         state: &mut GenerationState,
         placement_index: usize,
-        edge: &DawgEdge,
+        edge: &DawgEdge
     ) {
         state.partial_word.push(edge.letter);
         self.check_add_play(state, edge, placement_index + 1);
@@ -292,7 +300,7 @@ impl<'a> GenerationAnchor<'a> {
             let start = next_square_index - state.partial_word.len();
             let play = self
                 .aisle
-                .scored_play(start, state.partial_word.to_string());
+                .scored_play(start, state.partial_word.to_string(),state.partial_arranged.clone());
             state.plays.push(play)
         }
     }

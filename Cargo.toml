@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 lazy_static = "1.4.0"
-hardback_codec = {"path"="../hardback_codec"}
+hardback_boardstruct = {"path"="../hardback_boardstruct"}
 
 [profile.release]
 #lto = true

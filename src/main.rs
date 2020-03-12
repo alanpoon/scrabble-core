@@ -15,6 +15,7 @@ fn main() {
 
     let start = Instant::now();
     let plays = generate_plays(vec![143, 135, 108, 110, 111], &board, 1);
+    println!("...{:?}",[143, 135, 108, 110, 111]);
     let duration = start.elapsed();
     for play in plays.iter() {
         println!("play {:?}", play);

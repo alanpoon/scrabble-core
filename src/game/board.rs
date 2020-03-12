@@ -173,14 +173,12 @@ impl ScrabbleBoard {
 impl Index<Position> for ScrabbleBoard {
     type Output = Option<char>;
     fn index(&self, position: Position) -> &Self::Output {
-        println!("position {:?}",position);
         &self.squares[position.row][position.col]
     }
 }
 
 impl IndexMut<Position> for ScrabbleBoard {
     fn index_mut(&mut self, position: Position) -> &mut Self::Output {
-        println!("position {:?}",position);
         &mut self.squares[position.row][position.col]
     }
 }
@@ -219,7 +217,6 @@ impl Index<Position> for CheckedScrabbleBoard {
 
 impl IndexMut<Position> for CheckedScrabbleBoard {
     fn index_mut(&mut self, position: Position) -> &mut Self::Output {
-        println!("positionm{:?}",position);
         &mut self.squares[position.row][position.col]
     }
 }

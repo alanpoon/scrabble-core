@@ -11,8 +11,23 @@ pub fn score_play(aisle: &GenerationAisle, start_word_index: usize,
     let mut wait_for_input: [WaitForInputType; 4] = [vec![], vec![], vec![], vec![]];
     let mut board = BoardStruct::new(vec![create_player("p1".to_string(),arranged),create_player("p2".to_string(),vec![])],&vec![]);
     resolve_cards::resolve_cards(&mut board,0,cardmeta,&mut wait_for_input);
+    let mut p2 = board.players[1].clone();
+    let mut v1 = vec![1,2,3];
+    let mut v2 = vec![1,2,3];
+    let mut _wait_vec_vec = &mut wait_for_input[0];
+    for x in 0.._wait_vec_vec.len(){
+        if let Some(_wait_vec) = _wait_vec_vec.remove(0) {
+            if let Some(&(ref next_gstate, ref log, ref _closure)) =
+                _wait_vec.3.get(0) {
+                println!("log {:?}",log);
+                (*_closure)(&mut p2,
+                            &mut v1,
+                            &mut v2);
+            }
+        }
+    }
     let p1 = board.players[0].clone();
-    let p2 = board.players[1].clone();
+    
     action_space(p1,p2)
 }
 fn create_player(name:String,arranged:Vec<(usize,bool,Option<String>,bool)>)->Player{

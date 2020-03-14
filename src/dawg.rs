@@ -158,6 +158,5 @@ mod test {
     fn test_load_dawg2() {
         let dawg = load_dawg();
         let k = dawg.walk_from_node(dawg.root(),"pplea");
-        println!("zz {:?}",k);
     }
 }

@@ -1,7 +1,6 @@
 use std::fmt;
 
 use crate::dawg::{Dawg, DAWG_EDGE_TO_ROOT};
-use crate::game::scoring::letter_value;
 use crate::loading::A_INDEX;
 
 #[derive(Clone)]
@@ -57,7 +56,7 @@ impl CrossChecks {
         preceding
             .chars()
             .chain(following.chars())
-            .map(|ch| letter_value(ch))
+            .map(|ch| 1)
             .sum()
     }
 

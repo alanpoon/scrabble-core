@@ -11,14 +11,8 @@ fn main() {
 
     let existing_plays: Vec<ScrabblePlay> = vec![];
     let board = board_from_plays(&existing_plays);
-    println!("{}", board.display());
-
     let start = Instant::now();
     let plays = generate_plays(vec![143, 135, 108, 110, 111], &board, 1);
     println!("...{:?}",[143, 135, 108, 110, 111]);
-    let duration = start.elapsed();
-    for play in plays.iter() {
-        println!("play {:?}", play);
-    }
-    println!("Time elapsed in generate_plays() is: {:?}", duration);
+    println!("Time elapsed in generate_plays() is: {:?}", plays);
 }

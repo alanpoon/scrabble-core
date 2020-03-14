@@ -28,7 +28,7 @@ pub fn generate_plays(
     rack_contents: Vec<usize>,
     board: &ScrabbleBoard,
     max_n_plays: usize,
-) -> Vec<ScoredScrabblePlay> {
+) -> [Option<(String,i8)>;9] {
     let dawg = load_dawg();
     let checked_board = board.to_checked_board(dawg);
     let generator = PlayGenerator {
@@ -37,9 +37,17 @@ pub fn generate_plays(
         rack:rack_contents,
     };
     let mut plays = generator.plays();
-    plays.sort_by_key(|x| -x.score);
-    plays.truncate(max_n_plays);
-    plays
+    let mut most:[Option<(String,i8)>;9] = [None,None,None,None,None,None,None,None,None];
+    for v in plays{
+        if let Some(z) = &most[v.score.0]{
+            if v.score.1 > z.1{
+                most[v.score.0] = Some((v.play.word.clone(),v.score.1));
+            } 
+        }else{
+            most[v.score.0] = Some((v.play.word.clone(),v.score.1));
+        }
+    }
+    most
 }
 
 #[cfg(test)]

@@ -3,11 +3,11 @@ use crate::game::scoring::score_play;
 use crate::game::util::{Direction, Position};
 use crate::game::{CheckedAisleSquare, CheckedScrabbleBoard, BOARD_SIZE};
 use hardback_boardstruct::codec_lib::cards::{self,WaitForInputType,Board};
-
+use hardback_boardstruct::board::BoardStruct;
 #[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
 pub struct ScoredScrabblePlay {
     pub play: ScrabblePlay,
-    pub score: i32,
+    pub score: (usize,i8),
 }
 
 #[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
@@ -40,7 +40,6 @@ impl<'a> PlayGenerator<'a> {
              //   }
             }
         }
-        println!("player {:?}",plays.len());
         plays
     }
 
@@ -69,9 +68,10 @@ pub struct GenerationAisle {
 }
 
 impl GenerationAisle {
-    pub fn scored_play(&self, start_word_index: usize, word: String,arranged:Vec<(usize, bool, Option<String>, bool)>) -> ScoredScrabblePlay {
+    pub fn scored_play(&self, start_word_index: usize, word: String,
+        arranged:Vec<(usize, bool, Option<String>, bool)>,cardmeta:&[cards::ListCard<BoardStruct>; 180]) -> ScoredScrabblePlay {
         let start = self.position(start_word_index);
-        let score = score_play(&self, start_word_index, &word);
+        let score = score_play(&self, start_word_index, arranged.clone(),cardmeta);
         let play = ScrabblePlay {
             start,
             direction: self.direction,
@@ -84,46 +84,6 @@ impl GenerationAisle {
     pub fn position(&self, cross: usize) -> Position {
         Position::from_aisle_cross(self.direction, self.index, cross)
     }
-}
-pub struct BoardStruct{
-}
-impl Board for BoardStruct{
-    fn two_cent_per_adv(&mut self,
-        player_id: usize,
-        card_index: usize,
-        wait_for_input: &mut [WaitForInputType; 4]){
-
-        }
-    fn minus_other_ink(&mut self,
-        player_id: usize,
-        card_index: usize,
-        wait_for_input: &mut [WaitForInputType; 4]){
-            
-        }
-    fn lockup_offer(&mut self,
-        player_id: usize,
-        card_index: usize,
-        wait_for_input: &mut [WaitForInputType; 4]){}
-    fn uncover_adjacent(&mut self,
-                    player_id: usize,
-                    card_index: usize,
-                    wait_for_input: &mut [WaitForInputType; 4]){}
-    fn double_adjacent(&mut self,
-                player_id: usize,
-                card_index: usize,
-                wait_for_input: &mut [WaitForInputType; 4]){}
-    fn trash_other(&mut self,
-            player_id: usize,
-            card_index: usize,
-            wait_for_input: &mut [WaitForInputType; 4]){}
-    fn one_vp_per_wild(&mut self,
-                player_id: usize,
-                card_index: usize,
-                wait_for_input: &mut [WaitForInputType; 4]){}
-    fn putback_or_discard_three(&mut self,
-                            player_id: usize,
-                            card_index: usize,
-                            wait_for_input: &mut [WaitForInputType; 4]){}
 }
 struct GenerationState {
     plays: Vec<ScoredScrabblePlay>,
@@ -300,7 +260,7 @@ impl<'a> GenerationAnchor<'a> {
             let start = next_square_index - state.partial_word.len();
             let play = self
                 .aisle
-                .scored_play(start, state.partial_word.to_string(),state.partial_arranged.clone());
+                .scored_play(start, state.partial_word.to_string(),state.partial_arranged.clone(),&state.cardmeta);
             state.plays.push(play)
         }
     }

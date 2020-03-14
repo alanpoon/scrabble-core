@@ -5,7 +5,6 @@ use crate::dawg::Dawg;
 use crate::game::checked_square::{CheckedAisleSquare, CheckedBoardSquare};
 use crate::game::cross_checks::CrossChecks;
 use crate::game::play_generation::ScrabblePlay;
-use crate::game::scoring::ScoreModifier;
 use crate::game::util::{Direction, Position};
 use crate::game::util::{BLANK_TILE_CHAR, EMPTY_SQUARE_CHAR};
 
@@ -59,13 +58,9 @@ impl ScrabbleBoard {
 
     pub fn add_play(&mut self, play: &ScrabblePlay) {
         let mut position = play.start;
-        println!("vbn");
         for ch in play.word.chars() {
-            println!("bbn");
             self[position] = Some(ch);
-            println!("1bbn");
             position = position.step(play.direction);
-            println!("2bbn");
         }
     }
 
@@ -85,11 +80,7 @@ impl ScrabbleBoard {
                 let next_char = match &square {
                     Some(ch) => *ch,
                     None => {
-                        if show_modifiers {
-                            ScoreModifier::at(position).as_char()
-                        } else {
-                            EMPTY_SQUARE_CHAR
-                        }
+                        EMPTY_SQUARE_CHAR
                     }
                 };
                 result.push(next_char);

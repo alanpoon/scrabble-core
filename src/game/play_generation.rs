@@ -7,7 +7,7 @@ use hardback_boardstruct::board::BoardStruct;
 #[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
 pub struct ScoredScrabblePlay {
     pub play: ScrabblePlay,
-    pub score: (usize,i8),
+    pub score: [[i8;2];9],
 }
 
 #[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]

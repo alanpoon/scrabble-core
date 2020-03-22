@@ -26,9 +26,8 @@ pub fn board_from_plays(plays: &Vec<ScrabblePlay>) -> ScrabbleBoard {
 
 pub fn generate_plays(
     rack_contents: Vec<usize>,
-    board: &ScrabbleBoard,
-    max_n_plays: usize,
-) -> [Option<(String,i8)>;9] {
+    board: &ScrabbleBoard
+) -> [Option<(String,i8,Vec<(usize, bool, std::option::Option<std::string::String>, bool)>)>;9] {
     let dawg = load_dawg();
     let checked_board = board.to_checked_board(dawg);
     let generator = PlayGenerator {
@@ -37,14 +36,50 @@ pub fn generate_plays(
         rack:rack_contents,
     };
     let mut plays = generator.plays();
-    let mut most:[Option<(String,i8)>;9] = [None,None,None,None,None,None,None,None,None];
+    let mut most:[Option<(String,i8,Vec<(usize, bool, std::option::Option<std::string::String>, bool)>)>;9] = [None,None,None,None,None,None,None,None,None];
     for v in plays{
-        if let Some(z) = &most[v.score.0]{
-            if v.score.1 > z.1{
-                most[v.score.0] = Some((v.play.word.clone(),v.score.1));
-            } 
-        }else{
-            most[v.score.0] = Some((v.play.word.clone(),v.score.1));
+        let mut score_index=0;
+        for score in v.score.iter(){
+            if let Some(z) = &most[score_index]{
+                if score[1]> z.1{
+                    most[score_index] = Some((v.play.word.clone(),score[1],v.play.arranged.clone()));
+                }
+            }else if score[1]>0{
+                most[score_index] = Some((v.play.word.clone(),score[1],v.play.arranged.clone()));
+            }
+            score_index=score_index+1;
+        }
+    }
+    most
+}
+pub fn best_card_to_buy(draft:Vec<usize>,rack_contents:Vec<usize>,board: &ScrabbleBoard)-> [Option<(String,i8,Vec<(usize, bool, std::option::Option<std::string::String>, bool)>,usize)>;9]{
+    let dawg = load_dawg();
+    let checked_board = board.to_checked_board(dawg);
+    let mut most:[Option<(String,i8,Vec<(usize, bool, std::option::Option<std::string::String>, bool)>,usize)>;9] = [None,None,None,None,None,None,None,None,None];   
+    for r in rack_contents{
+        let mut draft_with_one_card=draft.clone();
+        draft_with_one_card.push(r);
+        println!("draft_with_one_card {:?}",draft_with_one_card);
+        let generator = PlayGenerator {
+            dawg,
+            checked_board:checked_board.clone(),
+            rack:draft_with_one_card,
+        };
+        let mut plays = generator.plays();
+        for v in plays{
+            let mut score_index=0;
+            
+            for score in v.score.iter(){
+                if let Some(z) = &most[score_index]{
+                    if score[1]> z.1{
+                        most[score_index] = Some((v.play.word.clone(),score[1],v.play.arranged.clone(),r));
+                    }
+                }else if score[1]>0{
+                    println!("v.play.word.clone() {:?}",v.play.word.clone());
+                    most[score_index] = Some((v.play.word.clone(),score[1],v.play.arranged.clone(),r));
+                }
+                score_index=score_index+1;
+            }
         }
     }
     most

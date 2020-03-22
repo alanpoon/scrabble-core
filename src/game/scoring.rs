@@ -6,7 +6,7 @@ use hardback_boardstruct::resolve_cards;
 use hardback_boardstruct::board::BoardStruct;
 
 pub fn score_play(aisle: &GenerationAisle, start_word_index: usize, 
-    arranged: Vec<(usize,bool,Option<String>,bool)>,cardmeta:&[cards::ListCard<BoardStruct>; 180]) -> (usize,i8) {
+    arranged: Vec<(usize,bool,Option<String>,bool)>,cardmeta:&[cards::ListCard<BoardStruct>; 180]) -> [[i8;2];9] {
     let mut position = aisle.position(start_word_index);
     let mut wait_for_input: [WaitForInputType; 4] = [vec![], vec![], vec![], vec![]];
     let mut board = BoardStruct::new(vec![create_player("p1".to_string(),arranged),create_player("p2".to_string(),vec![])],&vec![]);
@@ -19,7 +19,6 @@ pub fn score_play(aisle: &GenerationAisle, start_word_index: usize,
         if let Some(_wait_vec) = _wait_vec_vec.remove(0) {
             if let Some(&(ref next_gstate, ref log, ref _closure)) =
                 _wait_vec.3.get(0) {
-                println!("log {:?}",log);
                 (*_closure)(&mut p2,
                             &mut v1,
                             &mut v2);
@@ -49,7 +48,7 @@ fn create_player(name:String,arranged:Vec<(usize,bool,Option<String>,bool)>)->Pl
         discard:vec![]
     }
 }
-fn action_space(player:Player,player2:Player)->(usize,i8){
+fn action_space(player:Player,player2:Player)->[[i8;2];9]{
     let d_vp = player.vp as i8;
     let d_coin = player.coin as i8;
     let d_ink:i8 = player.ink as i8 -5;
@@ -60,8 +59,8 @@ fn action_space(player:Player,player2:Player)->(usize,i8){
     let d_discard:i8 = player.discard.len() as i8;
     let minus_ink:i8 = 5-player2.ink as i8;
     let minus_remover:i8 = 5-player2.remover as i8;
-    let mut sortable:[[i8;2];9] = [[0,d_vp],[1,d_coin],[2,d_ink],
-    [3,d_remover],[4,d_literacy_award],[5,d_lockup],[6,d_discard],[7,minus_ink],[8,minus_remover]];
-    sortable.sort_by(|a, b| b[1].partial_cmp(&a[1]).unwrap());
-    (sortable[0][0] as usize,sortable[0][1])
+    [[0,d_vp],[1,d_coin],[2,d_ink],
+    [3,d_remover],[4,d_literacy_award],[5,d_lockup],[6,d_discard],[7,minus_ink],[8,minus_remover]]
+    //sortable.sort_by(|a, b| b[1].partial_cmp(&a[1]).unwrap());
+    //(sortable[0][0] as usize,sortable[0][1])
 }

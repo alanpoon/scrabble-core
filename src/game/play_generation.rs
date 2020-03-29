@@ -7,7 +7,7 @@ use hardback_boardstruct::board::BoardStruct;
 #[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
 pub struct ScoredScrabblePlay {
     pub play: ScrabblePlay,
-    pub score: [[i8;2];9],
+    pub score: [i8;9],
 }
 
 #[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
@@ -25,8 +25,9 @@ pub struct PlayGenerator<'a> {
 }
 
 impl<'a> PlayGenerator<'a> {
-    pub fn plays(&self) -> Vec<ScoredScrabblePlay> {
+    pub fn plays(&self) -> (Vec<ScoredScrabblePlay>,Vec<[WaitForInputType;4]>) {
         let mut plays: Vec<ScoredScrabblePlay> = Vec::new();
+        let mut wait_for_input_vec: Vec<[WaitForInputType;4]> = Vec::new();
         for aisle in self.generation_aisles().iter() {
             
             for (anchor_index, tile) in aisle.squares.iter().enumerate() {
@@ -36,11 +37,13 @@ impl<'a> PlayGenerator<'a> {
                         aisle,
                         anchor_index,
                     };
-                plays.extend(solving_anchor.scored_plays(&self.rack));
+                let (p,wait_for_input)  =solving_anchor.scored_plays(&self.rack);
+                plays.extend(p);
+                wait_for_input_vec.extend(wait_for_input);
              //   }
             }
         }
-        plays
+        (plays,wait_for_input_vec)
     }
 
     fn generation_aisles(&self) -> Vec<GenerationAisle> {
@@ -69,9 +72,9 @@ pub struct GenerationAisle {
 
 impl GenerationAisle {
     pub fn scored_play(&self, start_word_index: usize, word: String,
-        arranged:Vec<(usize, bool, Option<String>, bool)>,cardmeta:&[cards::ListCard<BoardStruct>; 180]) -> ScoredScrabblePlay {
+        arranged:Vec<(usize, bool, Option<String>, bool)>,wait_for_input:&mut [WaitForInputType;4],cardmeta:&[cards::ListCard<BoardStruct>; 180]) -> ScoredScrabblePlay {
         let start = self.position(start_word_index);
-        let score = score_play(&self, start_word_index, arranged.clone(),cardmeta);
+        let score = score_play(&self, start_word_index, arranged.clone(),cardmeta,wait_for_input);
         let play = ScrabblePlay {
             start,
             direction: self.direction,
@@ -90,7 +93,8 @@ struct GenerationState {
     rack: Vec<usize>,
     partial_word: String,
     cardmeta:[cards::ListCard<BoardStruct>; 180],
-    partial_arranged: Vec<(usize, bool, Option<String>, bool)>
+    partial_arranged: Vec<(usize, bool, Option<String>, bool)>,
+    wait_for_inputs: Vec<[WaitForInputType;4]>
 }
 
 struct GenerationAnchor<'a> {
@@ -100,17 +104,17 @@ struct GenerationAnchor<'a> {
 }
 
 impl<'a> GenerationAnchor<'a> {
-    pub fn scored_plays(&self, rack: &Vec<usize>) -> Vec<ScoredScrabblePlay> {
+    pub fn scored_plays(&self, rack: &Vec<usize>) -> (Vec<ScoredScrabblePlay>,Vec<[WaitForInputType;4]>) {
         let initial_state = self.initial_state(rack);
         if let Ok((mut state, node)) = initial_state {
             let initial_limit = self.initial_limit();
             self.add_plays_for_left(&mut state, node, initial_limit);
-            state.plays
+            (state.plays,state.wait_for_inputs)
         } else {
-            Vec::new()
+            (Vec::new(),Vec::new())
         }
     }
-
+    
     fn initial_state(&self, rack: &Vec<usize>) -> Result<(GenerationState, DawgNodeIndex), ()> {
         let left_part_start_index = self.left_part_start_index();
         let (partial_word, partial_arranged,maybe_node) = self.initial_left_part(left_part_start_index);
@@ -121,6 +125,7 @@ impl<'a> GenerationAnchor<'a> {
                 rack: rack.clone(),
                 partial_word,
                 partial_arranged,
+                wait_for_inputs: Vec::new(),
                 cardmeta: cards::populate::<BoardStruct>()
             };
             Ok((play_generation_state, maybe_node))
@@ -257,11 +262,13 @@ impl<'a> GenerationAnchor<'a> {
         }
 
         if edge.word_terminator {
+            let mut wait_for_input:[WaitForInputType;4]=[vec![],vec![],vec![],vec![]];
             let start = next_square_index - state.partial_word.len();
             let play = self
                 .aisle
-                .scored_play(start, state.partial_word.to_string(),state.partial_arranged.clone(),&state.cardmeta);
-            state.plays.push(play)
+                .scored_play(start, state.partial_word.to_string(),state.partial_arranged.clone(),&mut wait_for_input,&state.cardmeta);
+            state.plays.push(play);
+            state.wait_for_inputs.push(wait_for_input);
         }
     }
 }
